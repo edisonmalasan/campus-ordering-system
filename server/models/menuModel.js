@@ -25,10 +25,12 @@ const menuSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  is_sold_out: {
-    type: Boolean,
-    default: false,
+  status: {
+    type: String,
+    enum: ["available", "unavailable", "sold_out", "hidden"],
+    default: "available",
   },
+  stock: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });
 
