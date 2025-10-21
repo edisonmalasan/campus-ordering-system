@@ -23,8 +23,18 @@ const cartSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
+  shop_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Shop",
+    required: true,
+  },
   items: [cartItemsSchema],
+  total_amount: {
+    type: Number,
+    default: 0,
+  },
   createdAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.models.Cart || mongoose.model("Cart", cartSchema);
+const Cart = mongoose.models.Cart || mongoose.model("Cart", cartSchema);
+export default Cart;

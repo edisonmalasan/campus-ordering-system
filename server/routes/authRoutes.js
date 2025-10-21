@@ -1,6 +1,6 @@
-const express = require('express');
+const express = require("express");
 
-const { handleLogin, handleAuthorize} = require(/* TODO: authController */)
+const { handleLogin, handleAuthorize } = require(/* TODO: authController */);
 
 const authRoutes = express.Router();
 authRoutes.use(express.json);
@@ -8,4 +8,4 @@ authRoutes.use(express.json);
 authRoutes.post("/login", handleLogin);
 authRoutes.post("/authorize", handleAuthorize);
 
-module.exports = authRoutes;
+export default authRoutes;

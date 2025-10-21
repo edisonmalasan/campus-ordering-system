@@ -39,6 +39,17 @@ const shopSchema = new mongoose.Schema({
   contact_number: {
     type: String,
   },
+  logo_url: {
+    type: String,
+  },
+  delivery_radius: {
+    type: Number,
+    required: true,
+  },
+  delivery_fee: {
+    type: Number,
+    required: true,
+  },
   operating_hours: [hoursSchema],
   business_permit_url: {
     type: String,
@@ -55,4 +66,5 @@ const shopSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.models.Shop || mongoose.model("Shop", shopSchema);
+const Shop = mongoose.models.Shop || mongoose.model("Shop", shopSchema);
+export default Shop;

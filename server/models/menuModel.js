@@ -21,6 +21,10 @@ const menuSchema = new mongoose.Schema({
   photo_url: {
     type: String,
   },
+  preparation_time: {
+    type: Number,
+    required: true,
+  },
   items_category: {
     type: String,
     required: true,
@@ -34,4 +38,5 @@ const menuSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.Menu || mongoose.model("Menu", menuSchema);
+const Menu = mongoose.models.Menu || mongoose.model("Menu", menuSchema);
+export default Menu;
