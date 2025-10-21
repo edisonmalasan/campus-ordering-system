@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { handleLogin, handleAuthorize} = require("../controller/authController.js")
+const { handleLogin, handleAuthorize} = require(/* TODO: authController */)
 
 const authRoutes = express.Router();
 authRoutes.use(express.json);
