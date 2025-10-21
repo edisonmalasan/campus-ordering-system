@@ -14,11 +14,6 @@ authRouter.post("/refresh-token", authController.handleTokenRefresh);
 authRouter.get("/verify-email/:token", authController.handleEmailVerification);
 authRouter.post("/forgot-password", authController.handleForgotPassword);
 authRouter.post("/reset-password/:token", authController.handleResetPassword);
-authRouter.get(
-  "/profile",
-  authMiddleware.validateToken(),
-  authController.handleGetUserProfile
-);
 authRouter.post(
   "/logout",
   authMiddleware.validateToken(),
