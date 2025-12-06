@@ -1,57 +1,37 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const userSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  email: {
-    type: String,
-    required: function (value) {
-      return this.emailRequired;
+const baseOptions = {
+  discriminatorKey: "role",
+  collection: "users",
+  timestamps: true,
+};
+
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/.+@.+\..+/, "Invalid email format"],
     },
-    unique: true,
-    trim: true,
-    lowercase: true,
-    match: [/.+@.+\..+/, "Please enter a valid email address"],
+    password: { type: String, required: true, minlength: 8 },
+    contact_number: { type: String },
+    profile_photo_url: { type: String, default: null },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    access_level: {
+      type: String,
+      enum: ["super admin", "admin", "base"],
+      default: "base",
+    },
   },
-  password: {
-    type: String,
-    minlength: 8,
-    required: true,
-  },
-  role: {
-    type: String,
-    enum: ["customer", "shop", "admin"],
-    required: true,
-  },
-  contact_number: {
-    type: String,
-  },
-  profile_photo_url: {
-    type: String,
-  },
-  location: {
-    type: String,
-  },
-  status: {
-    type: String,
-    enum: ["active", "inactive"],
-    default: "active",
-  },
-  access_level: {
-    type: String,
-    enum: ["super admin", "admin", "base"],
-    default: "base",
-  },
-  emailRequired: {
-    type: Boolean,
-    default: true,
-  },
-  createdAt: { type: Date, default: Date.now },
-});
+  baseOptions
+);
 
-// module.exports = mongoose.model("User", userSchema); // doesnt check for existing models
-const User = mongoose.models.User || mongoose.model("User", userSchema);
-export default User;
+export const User = mongoose.models.User || mongoose.model("User", userSchema);

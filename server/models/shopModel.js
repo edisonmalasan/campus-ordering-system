@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { User } from "../models/userModel.js";
 
 const hoursSchema = new mongoose.Schema({
   day: {
@@ -14,57 +15,25 @@ const hoursSchema = new mongoose.Schema({
     ],
     required: true,
   },
-  open: {
-    type: String,
-  },
-  close: {
-    type: String,
-  },
-  isClosed: {
-    type: Boolean,
-    default: false,
-  },
+  open: String,
+  close: String,
+  isClosed: { type: Boolean, default: false },
 });
 
 const shopSchema = new mongoose.Schema({
-  user_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  shop_name: {
-    type: String,
-    required: true,
-  },
-  contact_number: {
-    type: String,
-  },
-  logo_url: {
-    type: String,
-  },
-  delivery_radius: {
-    type: Number,
-    required: true,
-  },
-  delivery_fee: {
-    type: Number,
-    required: true,
-  },
+  shop_name: { type: String, required: true },
+  logo_url: { type: String },
+  delivery_radius: { type: Number, required: true },
+  delivery_fee: { type: Number, required: true },
+  business_permit_url: { type: String },
   operating_hours: [hoursSchema],
-  business_permit_url: {
-    type: String,
-  },
-  isTemporarilyClosed: {
-    type: Boolean,
-    default: false,
-  },
+  isTemporarilyClosed: { type: Boolean, default: false },
   status: {
     type: String,
-    enum: ["pending", "verified", "inactive"],
+    enum: ["pending", "verified", "rejected"],
     default: "pending",
   },
-  createdAt: { type: Date, default: Date.now },
 });
 
-const Shop = mongoose.models.Shop || mongoose.model("Shop", shopSchema);
-export default Shop;
+export const Shop =
+  mongoose.models.Shop || User.discriminator("shop", shopSchema);
