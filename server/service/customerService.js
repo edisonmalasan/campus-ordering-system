@@ -496,3 +496,104 @@ export const markNotificationAsRead = async (notificationId, userId) => {
 
   return notification;
 };
+
+export const getCheckout = async (userId) => {
+  const cart = await Cart.findOne({ user_id: userId })
+    .populate("shop_id", "shop_name logo_url delivery_fee operating_hours")
+    .populate(
+      "items.menu_id",
+      "items_name items_price photo_url items_description"
+    );
+
+  if (!cart || cart.items.length === 0) {
+    const error = new Error("Cart is empty");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  for (const cartItem of cart.items) {
+    const menuItem = await Menu.findById(
+      cartItem.menu_id._id || cartItem.menu_id
+    );
+    if (!menuItem || menuItem.status !== "available") {
+      const error = new Error(
+        `Menu item ${menuItem?.items_name || "unknown"} is no longer available`
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  const deliveryFee = cart.shop_id.delivery_fee || 0;
+  const subtotal = cart.total_amount;
+  const totalAmount = subtotal + deliveryFee;
+
+  return {
+    cart: cart,
+    subtotal: subtotal,
+    delivery_fee: deliveryFee,
+    total_amount: totalAmount,
+    shop: cart.shop_id,
+  };
+};
+
+export const getOrderSuccess = async (orderId, userId) => {
+  const order = await Order.findById(orderId)
+    .populate("shop_id", "shop_name logo_url name email contact_number")
+    .populate(
+      "items.menu_id",
+      "items_name items_price photo_url items_description"
+    );
+
+  if (!order) {
+    const error = new Error("Order not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (order.customer_id.toString() !== userId) {
+    const error = new Error("Access denied");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return order;
+};
+
+export const claimOrder = async (orderId, userId) => {
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    const error = new Error("Order not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (order.customer_id.toString() !== userId) {
+    const error = new Error("Access denied");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  // will only allow claiming if order is ready for pickup or delivered
+  if (!["ready_for_pickup", "delivered"].includes(order.order_status)) {
+    const error = new Error(
+      `Cannot claim order with status: ${order.order_status}. Order must be ready_for_pickup or delivered.`
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  order.order_status = "claimed";
+  await order.save();
+
+  await Notification.create({
+    user_id: order.shop_id,
+    title: "Order Claimed",
+    message: `Order #${order._id} has been claimed/picked up by the customer.`,
+    type: "order",
+    order_id: order._id,
+  });
+
+  return order;
+};

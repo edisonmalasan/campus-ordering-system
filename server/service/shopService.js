@@ -175,7 +175,14 @@ export const rejectOrder = async (orderId, userId) => {
 };
 
 export const updateOrderStatus = async (orderId, userId, newStatus) => {
-  const allowedStatuses = ["preparing", "on_the_way", "delivered", "cancelled"];
+  const allowedStatuses = [
+    "preparing",
+    "ready_for_pickup",
+    "on_the_way",
+    "delivered",
+    "claimed",
+    "cancelled",
+  ];
 
   if (!allowedStatuses.includes(newStatus)) {
     const error = new Error(`Invalid order status: ${newStatus}`);
@@ -202,14 +209,16 @@ export const updateOrderStatus = async (orderId, userId, newStatus) => {
 
   const statusMessages = {
     preparing: "Your order is being prepared.",
+    ready_for_pickup: "Your order is ready for pickup!",
     on_the_way: "Your order is on the way!",
     delivered: "Your order has been delivered.",
+    claimed: "Your order has been marked as claimed.",
     cancelled: "Your order has been cancelled.",
   };
 
   await Notification.create({
     user_id: order.customer_id,
-    title: `Order ${newStatus.replace("_", " ")}`,
+    title: `Order ${newStatus.replace(/_/g, " ")}`,
     message: `Order #${order._id}: ${statusMessages[newStatus]}`,
     type: "order",
     order_id: order._id,

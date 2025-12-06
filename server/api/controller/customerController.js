@@ -214,3 +214,42 @@ export const markNotificationAsRead = async (req, res) => {
     });
   }
 };
+
+export const getCheckout = async (req, res) => {
+  try {
+    const checkoutData = await customerService.getCheckout(req.user.userId);
+    res.status(200).json({ success: true, data: checkoutData });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const getOrderSuccess = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await customerService.getOrderSuccess(id, req.user.userId);
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const claimOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await customerService.claimOrder(id, req.user.userId);
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
