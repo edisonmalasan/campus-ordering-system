@@ -1,56 +1,45 @@
-version: "3.8"
+version: "3.9"
 
 services:
-  backend:
-    build:
-      context: ./server
-    volumes:
-      - ./server:/app
-      - /app/node_modules
+  server:
+    build: ./server
     ports:
-      - "3000:3000"
+      - "5000:5000"
     environment:
-      NODE_ENV: development
-      MONGODB_URI: mongodb://admin:password123@mongodb:27017/campus-ordering-system?authSource=admin
+      - MONGO_URI=mongodb://mongo:27017/mydb
     depends_on:
-      - mongodb
-    networks:
-      - backend_network
+      - mongo
+    volumes:
+      - ./server:/usr/src/app
+    restart: always
 
-  mongodb:
-    image: mongo:latest
-    restart: unless-stopped
+  mongo:
+    image: mongo:6
+    container_name: mongo
     ports:
       - "27017:27017"
     environment:
-      # enable auth and define root user credentials (used when u want to directly connect to mongoDB using Mongo Compass the desktop app)
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: campus-ordering-system
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASS:-password123}
     volumes:
-      - mongodb_data:/data/db
-    networks:
-      - backend_network
+      - mongo_data:/data/db
+    restart: always
 
   mongo-express:
-    image: mongo-express:latest
-    restart: unless-stopped
+    image: mongo-express
+    container_name: mongo-express
+    restart: always
     ports:
-      - "8081:8081"
+      - "8082:8081"
     environment:
-      ME_CONFIG_MONGODB_SERVER: mongodb
-      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
-      ME_CONFIG_MONGODB_ADMINPASSWORD: password123
-      ME_CONFIG_BASICAUTH_USERNAME: admin
-      ME_CONFIG_BASICAUTH_PASSWORD: password
+      - ME_CONFIG_MONGODB_SERVER=mongo
+      - ME_CONFIG_MONGODB_PORT=27017
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_USER:-admin}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_PASS:-password123}
+      - ME_CONFIG_BASICAUTH_USERNAME=${ME_USER:-admin}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${ME_PASS:-password123}
     depends_on:
-      - mongodb
-    networks:
-      - backend_network
+      - mongo
 
 volumes:
-  mongodb_data:
-
-networks:
-  backend_network:
-    driver: bridge
+  mongo_data:

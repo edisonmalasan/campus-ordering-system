@@ -1,11 +1,20 @@
-FROM node:22-alpine
+# Use Node LTS
+FROM node:18
 
-WORKDIR /app
+# Create app directory
+WORKDIR /usr/src/app
 
+# Copy package files first (for caching)
 COPY package*.json ./
 
+# Install dependencies
 RUN npm install
 
+# Copy the rest of the app
 COPY . .
 
-CMD [ "npm", "run", "dev"]
+# Expose port
+EXPOSE 5000
+
+# Start the app
+CMD ["node", "server.js"]
