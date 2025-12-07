@@ -98,11 +98,11 @@ export const handleCancelOrder = async (req, res) => {
   }
 };
 
-export const getShopMenu = async (req, res) => {
+export const getShopProduct = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const menu = await shopService.getMenu(userId);
-    res.status(200).json({ success: true, data: menu });
+    const product = await shopService.getProduct(userId);
+    res.status(200).json({ success: true, data: product });
   } catch (error) {
     res
       .status(error.statusCode || 500)
@@ -110,12 +110,12 @@ export const getShopMenu = async (req, res) => {
   }
 };
 
-export const addMenuItem = async (req, res) => {
+export const addProductItem = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const menuData = req.body;
-    const menuItem = await shopService.addMenuItem(userId, menuData);
-    res.status(201).json({ success: true, data: menuItem });
+    const productData = req.body;
+    const productItem = await shopService.addProductItem(userId, productData);
+    res.status(201).json({ success: true, data: productItem });
   } catch (error) {
     res
       .status(error.statusCode || 500)
@@ -123,12 +123,12 @@ export const addMenuItem = async (req, res) => {
   }
 };
 
-export const updateMenuItem = async (req, res) => {
+export const updateProductItem = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
     const updateData = req.body;
-    const updated = await shopService.updateMenuItem(id, userId, updateData);
+    const updated = await shopService.updateProductItem(id, userId, updateData);
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
     res
@@ -137,11 +137,11 @@ export const updateMenuItem = async (req, res) => {
   }
 };
 
-export const deleteMenuItem = async (req, res) => {
+export const deleteProductItem = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
-    const result = await shopService.deleteMenuItem(id, userId);
+    const result = await shopService.deleteProductItem(id, userId);
     res.status(200).json({ success: true, message: result.message });
   } catch (error) {
     res

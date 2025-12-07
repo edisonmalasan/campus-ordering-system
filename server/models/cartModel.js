@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 
 const cartItemsSchema = new mongoose.Schema({
-  menu_id: {
+  product_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Menu",
+    ref: "Product",
     required: true,
   },
   quantity: {

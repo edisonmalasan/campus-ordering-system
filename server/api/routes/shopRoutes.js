@@ -2,10 +2,10 @@ import express from "express";
 import {
   getShopProfile,
   updateShopProfile,
-  getShopMenu,
-  addMenuItem,
-  updateMenuItem,
-  deleteMenuItem,
+  getShopProduct,
+  addProductItem,
+  updateProductItem,
+  deleteProductItem,
   getShopOrders,
   handleAcceptOrder,
   handleRejectOrder,
@@ -23,10 +23,10 @@ shopRouter.use(validateToken(), requireRole("shop"));
 
 shopRouter.get("/profile", getShopProfile);
 shopRouter.put("/profile", updateShopProfile);
-shopRouter.get("/menu", getShopMenu);
-shopRouter.post("/menu", addMenuItem);
-shopRouter.put("/menu/:id", updateMenuItem);
-shopRouter.delete("/menu/:id", deleteMenuItem);
+shopRouter.get("/product", getShopProduct);
+shopRouter.post("/product", addProductItem);
+shopRouter.put("/product/:id", updateProductItem);
+shopRouter.delete("/product/:id", deleteProductItem);
 shopRouter.get("/orders", getShopOrders);
 
 shopRouter.patch("/orders/:id/accept", handleAcceptOrder);

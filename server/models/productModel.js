@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const menuSchema = new mongoose.Schema({
+const productSchema = new mongoose.Schema({
   shop_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Shop",
@@ -38,5 +38,6 @@ const menuSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-const Menu = mongoose.models.Menu || mongoose.model("Menu", menuSchema);
-export default Menu;
+const Product =
+  mongoose.models.Product || mongoose.model("Product", productSchema);
+export default Product;

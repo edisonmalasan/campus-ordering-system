@@ -201,7 +201,7 @@ export const getAllOrders = async (filters = {}) => {
   const orders = await Order.find(query)
     .populate("shop_id", "shop_name logo_url name email")
     .populate("customer_id", "name email contact_number")
-    .populate("items.menu_id", "items_name items_price photo_url")
+    .populate("items.product_id", "items_name items_price photo_url")
     .sort({ createdAt: -1 })
     .limit(filters.limit || 100)
     .skip(filters.skip || 0);
@@ -220,7 +220,7 @@ export const getOrderById = async (orderId) => {
   const order = await Order.findById(orderId)
     .populate("shop_id", "shop_name logo_url name email")
     .populate("customer_id", "name email contact_number")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 
   if (!order) {
     const error = new Error("Order not found");

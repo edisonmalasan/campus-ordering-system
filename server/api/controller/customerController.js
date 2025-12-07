@@ -51,11 +51,11 @@ export const getAvailableShops = async (req, res) => {
   }
 };
 
-export const getShopMenu = async (req, res) => {
+export const getShopProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const menu = await customerService.getShopMenu(id);
-    res.status(200).json({ success: true, data: menu });
+    const product = await customerService.getShopProduct(id);
+    res.status(200).json({ success: true, data: product });
   } catch (error) {
     res.status(error.statusCode || 500).json({
       success: false,
@@ -252,4 +252,3 @@ export const claimOrder = async (req, res) => {
     });
   }
 };
-
