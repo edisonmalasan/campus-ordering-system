@@ -10,14 +10,17 @@ import {
   FieldSeparator,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { useAuthStore } from "@/store/authStore";
+import { useAuth } from "@/hooks/useAuth";
 
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
   const navigate = useNavigate();
-  const { login, isLoading, error, clearError } = useAuthStore();
+  const login = useAuth((state) => state.login);
+  const isLoading = useAuth((state) => state.isLoading);
+  const error = useAuth((state) => state.error);
+
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -25,22 +28,21 @@ export function LoginForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
 
-    try {
-      await login(formData);
+    const success = await login(formData);
 
-      const user = useAuthStore.getState().user;
+    if (success) {
+      const user = useAuth.getState().user;
 
       if (user?.role === "customer") {
         navigate("/customer");
       } else if (user?.role === "shop") {
         navigate("/shop");
+      } else if (user?.role === "admin" || user?.access_level === "admin") {
+        navigate("/admin");
       } else {
         navigate("/");
       }
-    } catch (err) {
-      console.error("Login failed:", err);
     }
   };
 
