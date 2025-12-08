@@ -21,8 +21,12 @@ export const login = async (email, password) => {
     throw error;
   }
 
-  if (user.status !== "active") {
-    const error = new Error("Account is inactive");
+  if (user.role === "shop" && user.status !== "verified") {
+    const error = new Error(
+      user.status === "pending"
+        ? "Account pending verification"
+        : "Account has been rejected"
+    );
     error.statusCode = 403;
     throw error;
   }
@@ -47,6 +51,22 @@ export const login = async (email, password) => {
       email: user.email,
       name: user.name,
       role: user.role,
+      profile_photo_url: user.profile_photo_url,
+      contact_number: user.contact_number,
+      status: user.status,
+      access_level: user.access_level,
+      createdAt: user.createdAt,
+      ...(user.role === "customer" && {
+        department: user.department,
+        gender: user.gender,
+        student_id: user.student_id,
+      }),
+      ...(user.role === "shop" && {
+        shop_name: user.shop_name,
+        business_permit_code: user.business_permit_code,
+        logo_url: user.logo_url,
+        delivery_fee: user.delivery_fee,
+      }),
     },
   };
 };
@@ -70,7 +90,7 @@ export const registerCustomer = async (userData) => {
     contact_number: userData.contact_number,
     department: userData.department,
     gender: userData.gender,
-    status: "active",
+    student_id: userData.student_id,
   });
 
   const token = generateToken({
@@ -96,6 +116,10 @@ export const registerCustomer = async (userData) => {
       role: "customer",
       department: customer.department,
       gender: customer.gender,
+      student_id: customer.student_id,
+      profile_photo_url: customer.profile_photo_url,
+      status: customer.status,
+      createdAt: customer.createdAt,
     },
   };
 };
@@ -120,7 +144,7 @@ export const registerShop = async (userData) => {
     shop_name: userData.shop_name,
     contact_number: userData.contact_number,
     delivery_fee: userData.delivery_fee,
-    business_permit_url: userData.business_permit_url,
+    business_permit_code: userData.business_permit_code,
     status: "pending",
   });
 
@@ -146,6 +170,124 @@ export const registerShop = async (userData) => {
       role: "shop",
       shop_name: shop.shop_name,
       status: shop.status,
+      contact_number: shop.contact_number,
+      business_permit_code: shop.business_permit_code,
+      logo_url: shop.logo_url,
+      delivery_fee: shop.delivery_fee,
+      profile_photo_url: shop.profile_photo_url,
+      createdAt: shop.createdAt,
+    },
+  };
+};
+
+export const updatePassword = async (userId, currentPassword, newPassword) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+  if (!isPasswordValid) {
+    const error = new Error("Current password is incorrect");
+    error.statusCode = 401;
+    throw error;
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+  user.password = hashedPassword;
+  await user.save();
+
+  return {
+    message: "Password updated successfully",
+  };
+};
+
+export const updateProfile = async (userId, updateData) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (updateData.name) user.name = updateData.name;
+  if (updateData.contact_number)
+    user.contact_number = updateData.contact_number;
+
+  await user.save();
+
+  return {
+    message: "Profile updated successfully",
+    user: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      contact_number: user.contact_number,
+      profile_photo_url: user.profile_photo_url,
+      status: user.status,
+      access_level: user.access_level,
+      createdAt: user.createdAt,
+      ...(user.role === "customer" && {
+        department: user.department,
+        gender: user.gender,
+        student_id: user.student_id,
+      }),
+      ...(user.role === "shop" && {
+        shop_name: user.shop_name,
+        business_permit_code: user.business_permit_code,
+        logo_url: user.logo_url,
+        delivery_fee: user.delivery_fee,
+      }),
+    },
+  };
+};
+
+export const updateShopSettings = async (userId, settingsData) => {
+  const user = await User.findById(userId);
+
+  if (!user) {
+    const error = new Error("User not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (user.role !== "shop") {
+    const error = new Error("Only shop owners can update shop settings");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (settingsData.shop_name) user.shop_name = settingsData.shop_name;
+  if (settingsData.delivery_fee !== undefined)
+    user.delivery_fee = settingsData.delivery_fee;
+  if (settingsData.logo_url !== undefined)
+    user.logo_url = settingsData.logo_url;
+
+  await user.save();
+
+  return {
+    message: "Shop settings updated successfully",
+    user: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      contact_number: user.contact_number,
+      profile_photo_url: user.profile_photo_url,
+      status: user.status,
+      access_level: user.access_level,
+      createdAt: user.createdAt,
+      shop_name: user.shop_name,
+      business_permit_code: user.business_permit_code,
+      logo_url: user.logo_url,
+      delivery_fee: user.delivery_fee,
     },
   };
 };
