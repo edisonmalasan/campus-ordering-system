@@ -10,10 +10,21 @@ const axiosInstance = axios.create({
 
 axiosInstance.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("access_token");
+    const publicEndpoints = [
+      "/auth/login",
+      "/auth/register/customer",
+      "/auth/register/shop",
+      "/auth/refresh",
+    ];
+    const isPublicEndpoint = publicEndpoints.some((endpoint) =>
+      config.url?.includes(endpoint)
+    );
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    if (!isPublicEndpoint) {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
 
     return config;
@@ -30,6 +41,13 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    if (
+      originalRequest.url?.includes("/auth/login") ||
+      originalRequest.url?.includes("/auth/register")
+    ) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
@@ -38,7 +56,9 @@ axiosInstance.interceptors.response.use(
 
         if (!refreshToken) {
           localStorage.removeItem("access_token");
-          window.location.href = "/login";
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/login";
+          }
           return Promise.reject(error);
         }
 
