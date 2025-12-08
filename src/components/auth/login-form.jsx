@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -6,6 +7,7 @@ import { Label } from "@/components/ui/label";
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -45,11 +47,8 @@ export default function LoginForm() {
 
       <Button
         type="button"
-        variant="solid"
         className="w-full !text-sm mt-0 !bg-transparent !shadow-none !border-0 !text-[#868786] px-0 hover:underline"
-        onClick={() => {
-        router.push('/register')
-    }}
+        onClick={() => navigate("/register")} 
       >
         Create an account
       </Button>
