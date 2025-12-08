@@ -43,10 +43,16 @@ export default function LoginForm() {
         Login
       </Button>
 
-      <Button variant="link" className="w-full !text-sm mt-0 !bg-transparent !shadow-none !border-0 !text-[#868786] px-0">
-        Forgot Password?
+      <Button
+        type="button"
+        variant="solid"
+        className="w-full !text-sm mt-0 !bg-transparent !shadow-none !border-0 !text-[#868786] px-0 hover:underline"
+        onClick={() => {
+        router.push('/register')
+    }}
+      >
+        Create an account
       </Button>
-
     </form>
   );
 }
