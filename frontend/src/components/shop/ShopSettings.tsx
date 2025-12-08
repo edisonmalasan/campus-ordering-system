@@ -19,7 +19,6 @@ export default function ShopSettings() {
     shop_name: "Emerson Canteen",
     business_permit_code: "BP-2024-12345",
     logo_url: "",
-    delivery_radius: "5",
     delivery_fee: "20",
     isTemporarilyClosed: false,
     operating_hours: [
@@ -122,42 +121,21 @@ export default function ShopSettings() {
           <CardTitle>Delivery Settings</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="delivery_radius">Delivery Radius (km) *</Label>
-              <Input
-                id="delivery_radius"
-                type="number"
-                step="0.1"
-                min="0"
-                placeholder="5"
-                value={settings.delivery_radius}
-                onChange={(e) =>
-                  setSettings({ ...settings, delivery_radius: e.target.value })
-                }
-                required
-              />
-              <p className="text-xs text-gray-500">
-                Maximum delivery distance from your location
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="delivery_fee">Delivery Fee (₱) *</Label>
-              <Input
-                id="delivery_fee"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="20.00"
-                value={settings.delivery_fee}
-                onChange={(e) =>
-                  setSettings({ ...settings, delivery_fee: e.target.value })
-                }
-                required
-              />
-              <p className="text-xs text-gray-500">Standard delivery charge</p>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="delivery_fee">Delivery Fee (₱) *</Label>
+            <Input
+              id="delivery_fee"
+              type="number"
+              step="0.01"
+              min="0"
+              placeholder="20.00"
+              value={settings.delivery_fee}
+              onChange={(e) =>
+                setSettings({ ...settings, delivery_fee: e.target.value })
+              }
+              required
+            />
+            <p className="text-xs text-gray-500">Standard delivery charge</p>
           </div>
 
           <div className="flex items-center justify-between p-4 border rounded-lg">

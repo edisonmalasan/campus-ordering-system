@@ -31,7 +31,7 @@ export default function Register() {
                   </h2>
                   <p className="text-gray-600 text-sm">
                     Order delicious food from campus vendors and get it
-                    delivered to your location
+                    delivered SAMCIS campus
                   </p>
                 </div>
 

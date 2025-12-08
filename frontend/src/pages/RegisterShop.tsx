@@ -19,8 +19,6 @@ export default function RegisterShop() {
     confirmPassword: "",
     contact_number: "",
     shop_name: "",
-    logo_url: "",
-    delivery_radius: "",
     delivery_fee: "",
     business_permit_code: "",
   });
@@ -47,8 +45,6 @@ export default function RegisterShop() {
       password: formData.password,
       contact_number: formData.contact_number,
       shop_name: formData.shop_name,
-      logo_url: formData.logo_url,
-      delivery_radius: parseFloat(formData.delivery_radius),
       delivery_fee: parseFloat(formData.delivery_fee),
       business_permit_code: formData.business_permit_code,
       role: "shop",
@@ -196,57 +192,21 @@ export default function RegisterShop() {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="logo_url">Shop Logo URL</FieldLabel>
+                    <FieldLabel htmlFor="delivery_fee">Delivery Fee (₱) *</FieldLabel>
                     <Input
-                      id="logo_url"
-                      type="url"
-                      placeholder="https://example.com/logo.jpg"
-                      value={formData.logo_url}
+                      id="delivery_fee"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="20.00"
+                      value={formData.delivery_fee}
                       onChange={(e) =>
-                        setFormData({ ...formData, logo_url: e.target.value })
+                        setFormData({ ...formData, delivery_fee: e.target.value })
                       }
+                      required
                     />
-                    <FieldDescription>Optional logo URL</FieldDescription>
+                    <FieldDescription>Standard delivery charge</FieldDescription>
                   </Field>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <Field>
-                      <FieldLabel htmlFor="delivery_radius">
-                        Radius (km) *
-                      </FieldLabel>
-                      <Input
-                        id="delivery_radius"
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="5"
-                        value={formData.delivery_radius}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            delivery_radius: e.target.value,
-                          })
-                        }
-                        required
-                      />
-                    </Field>
-
-                    <Field>
-                      <FieldLabel htmlFor="delivery_fee">Fee (₱) *</FieldLabel>
-                      <Input
-                        id="delivery_fee"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="20.00"
-                        value={formData.delivery_fee}
-                        onChange={(e) =>
-                          setFormData({ ...formData, delivery_fee: e.target.value })
-                        }
-                        required
-                      />
-                    </Field>
-                  </div>
 
                   <Field>
                     <FieldLabel htmlFor="business_permit_code">
