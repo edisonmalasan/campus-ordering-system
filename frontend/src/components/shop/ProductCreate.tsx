@@ -12,43 +12,57 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Save, Upload } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
+import * as shopApi from "@/lib/api/shop";
+import { toast } from "sonner";
 
 export default function ProductCreate() {
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    items_name: "",
-    items_category: "",
-    items_price: "",
-    stock: "",
-    items_description: "",
-    preparation_time: "",
-    photo_url: "",
-    status: "available",
+    name: "",
+    category: "",
+    price: "",
+    description: "",
+    image_url: "",
+    availability: true,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: API call to create product
-    console.log("Creating product:", formData);
-    navigate("/shop/products");
+    
+    try {
+      setIsSubmitting(true);
+      await shopApi.addProduct({
+        name: formData.name,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        category: formData.category,
+        image_url: formData.image_url || undefined,
+        availability: formData.availability,
+      });
+      
+      toast.success("Product created successfully");
+      navigate("/shop/products");
+    } catch (error: any) {
+      console.error("Error creating product:", error);
+      toast.error(error.response?.data?.error || "Failed to create product");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/shop/products")}
-        >
+        <Button variant="ghost" size="sm" onClick={() => navigate("/shop/products")}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Back
         </Button>
       </div>
 
       <Card className="max-w-3xl">
         <CardHeader>
-          <CardTitle>Product Details</CardTitle>
+          <CardTitle>Add New Product</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -58,25 +72,21 @@ export default function ProductCreate() {
               </h3>
 
               <div className="space-y-2">
-                <Label htmlFor="items_name">Product Name *</Label>
+                <Label htmlFor="name">Product Name *</Label>
                 <Input
-                  id="items_name"
+                  id="name"
                   placeholder="e.g. Chicken Adobo Rice"
-                  value={formData.items_name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, items_name: e.target.value })
-                  }
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="items_category">Category *</Label>
+                <Label htmlFor="category">Category *</Label>
                 <Select
-                  value={formData.items_category}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, items_category: value })
-                  }
+                  value={formData.category}
+                  onValueChange={(value) => setFormData({ ...formData, category: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
@@ -93,18 +103,13 @@ export default function ProductCreate() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="items_description">Description *</Label>
+                <Label htmlFor="description">Description *</Label>
                 <Textarea
-                  id="items_description"
+                  id="description"
                   placeholder="Describe your product..."
                   rows={4}
-                  value={formData.items_description}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      items_description: e.target.value,
-                    })
-                  }
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   required
                 />
               </div>
@@ -112,58 +117,20 @@ export default function ProductCreate() {
 
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">
-                Pricing & Inventory
+                Pricing
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="items_price">Price (₱) *</Label>
-                  <Input
-                    id="items_price"
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.items_price}
-                    onChange={(e) =>
-                      setFormData({ ...formData, items_price: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="stock">Stock Quantity *</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    placeholder="0"
-                    value={formData.stock}
-                    onChange={(e) =>
-                      setFormData({ ...formData, stock: e.target.value })
-                    }
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="preparation_time">Prep Time (min) *</Label>
-                  <Input
-                    id="preparation_time"
-                    type="number"
-                    placeholder="15"
-                    value={formData.preparation_time}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        preparation_time: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                  <p className="text-xs text-gray-500">
-                    Estimated preparation time
-                  </p>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="price">Price (₱) *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  required
+                />
               </div>
             </div>
 
@@ -173,24 +140,15 @@ export default function ProductCreate() {
               </h3>
 
               <div className="space-y-2">
-                <Label htmlFor="photo_url">Photo URL</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="photo_url"
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    value={formData.photo_url}
-                    onChange={(e) =>
-                      setFormData({ ...formData, photo_url: e.target.value })
-                    }
-                  />
-                  <Button type="button" variant="outline" size="sm">
-                    <Upload className="h-4 w-4 mr-2" /> Upload
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Enter image URL or upload a file
-                </p>
+                <Label htmlFor="image_url">Photo URL (Optional)</Label>
+                <Input
+                  id="image_url"
+                  type="url"
+                  placeholder="https://example.com/image.jpg"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                />
+                <p className="text-xs text-gray-500">Enter image URL</p>
               </div>
             </div>
 
@@ -200,21 +158,19 @@ export default function ProductCreate() {
               </h3>
 
               <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
+                <Label htmlFor="availability">Status *</Label>
                 <Select
-                  value={formData.status}
+                  value={formData.availability ? "true" : "false"}
                   onValueChange={(value) =>
-                    setFormData({ ...formData, status: value })
+                    setFormData({ ...formData, availability: value === "true" })
                   }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="unavailable">Unavailable</SelectItem>
-                    <SelectItem value="sold_out">Sold Out</SelectItem>
-                    <SelectItem value="hidden">Hidden</SelectItem>
+                    <SelectItem value="true">Available</SelectItem>
+                    <SelectItem value="false">Unavailable</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-gray-500">
@@ -224,13 +180,19 @@ export default function ProductCreate() {
             </div>
 
             <div className="flex gap-3 pt-4 border-t">
-              <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                <Save className="h-4 w-4 mr-2" /> Save Product
+              <Button
+                type="submit"
+                className="bg-green-600 hover:bg-green-700"
+                disabled={isSubmitting}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isSubmitting ? "Saving..." : "Save Product"}
               </Button>
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => navigate("/shop/products")}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>

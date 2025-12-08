@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Save, Upload } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import * as authApi from "@/lib/api/auth";
+import { toast } from "sonner";
 
 type DayHours = {
   day: string;
@@ -15,11 +18,12 @@ type DayHours = {
 };
 
 export default function ShopSettings() {
+  const { user: authUser } = useAuth();
   const [settings, setSettings] = useState({
-    shop_name: "Emerson Canteen",
-    business_permit_code: "BP-2024-12345",
-    logo_url: "",
-    delivery_fee: "20",
+    shop_name: (authUser as any)?.shop_name || "",
+    business_permit_code: (authUser as any)?.business_permit_code || "",
+    logo_url: (authUser as any)?.logo_url || "",
+    delivery_fee: (authUser as any)?.delivery_fee?.toString() || "20",
     isTemporarilyClosed: false,
     operating_hours: [
       { day: "Monday", open: "07:00", close: "18:00", isClosed: false },
@@ -32,10 +36,37 @@ export default function ShopSettings() {
     ] as DayHours[],
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (authUser) {
+      setSettings((prev) => ({
+        ...prev,
+        shop_name: (authUser as any)?.shop_name || "",
+        business_permit_code: (authUser as any)?.business_permit_code || "",
+        logo_url: (authUser as any)?.logo_url || "",
+        delivery_fee: (authUser as any)?.delivery_fee?.toString() || "20",
+      }));
+    }
+  }, [authUser]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: API call to update settings
-    console.log("Updating settings:", settings);
+
+    try {
+      const response = await authApi.updateShopSettings({
+        shop_name: settings.shop_name,
+        delivery_fee: parseFloat(settings.delivery_fee),
+        logo_url: settings.logo_url,
+      });
+
+      if (response.success && response.data.user) {
+        useAuth.setState({ user: response.data.user });
+        toast.success("Shop settings updated successfully!");
+      }
+    } catch (error: any) {
+      const errorMessage =
+        error.response?.data?.error || "Failed to update settings";
+      toast.error(errorMessage);
+    }
   };
 
   const updateDayHours = (

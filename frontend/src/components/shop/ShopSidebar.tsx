@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ChevronUp, User2, Settings, LogOut, ChevronDown } from "lucide-react";
 import {
   IconLayoutDashboard,
@@ -28,13 +28,18 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import navibitesLogo from "@/assets/icon.png";
+import { useAuth } from "@/hooks/useAuth";
 
-// Navigation structure for shop
 const navigationItems = [
   {
     name: "Dashboard",
     url: "/shop/dashboard",
     icon: IconLayoutDashboard,
+  },
+  {
+    name: "Profile",
+    url: "/shop/profile",
+    icon: User2,
   },
   {
     name: "Products",
@@ -184,6 +189,13 @@ export function ShopSidebar({
 }: React.ComponentProps<typeof Sidebar>) {
   const { state } = useSidebar();
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
 
   const isCollapsed = state === "collapsed";
 
@@ -219,7 +231,16 @@ export function ShopSidebar({
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton className="w-full">
-                  <User2 /> Shop Owner
+                  {user?.profile_photo_url ? (
+                    <img
+                      src={user.profile_photo_url}
+                      alt={user.name}
+                      className="h-6 w-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <User2 />
+                  )}
+                  <span className="truncate">{user?.name || "Shop Owner"}</span>
                   <ChevronUp
                     className={`ml-auto transition-transform duration-200 ${
                       isOpen ? "rotate-180" : ""
@@ -234,7 +255,11 @@ export function ShopSidebar({
                     <span>Settings</span>
                   </Link>
                 </SidebarMenuButton>
-                <SidebarMenuButton asChild className="cursor-pointer pl-8">
+                <SidebarMenuButton
+                  asChild
+                  className="cursor-pointer pl-8"
+                  onClick={handleLogout}
+                >
                   <button className="flex items-center gap-2 w-full">
                     <LogOut className="h-4 w-4" />
                     <span>Sign out</span>
