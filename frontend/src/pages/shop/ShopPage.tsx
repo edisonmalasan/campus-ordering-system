@@ -10,6 +10,7 @@ import { useLocation } from "react-router-dom";
 
 const pageTitles: Record<string, string> = {
   "/shop/dashboard": "Dashboard",
+  "/shop/profile": "Profile",
   "/shop/products": "Products",
   "/shop/products/new": "Add Product",
   "/shop/orders": "Orders",

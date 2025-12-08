@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,12 +15,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft } from "lucide-react";
-import { useAuthStore } from "@/store/authStore";
+import { ArrowLeft, Check, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function RegisterCustomer() {
   const navigate = useNavigate();
-  const { registerCustomer, isLoading, error, clearError } = useAuthStore();
+  const { registerCustomer, isLoading, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -32,9 +32,14 @@ export default function RegisterCustomer() {
     gender: "",
   });
 
+  // Clear any existing errors when component mounts
+  useEffect(() => {
+    clearError();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
 
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match!");
@@ -116,36 +121,69 @@ export default function RegisterCustomer() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="password">Password *</FieldLabel>
-                  <Input
-                    id="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    required
-                    minLength={8}
-                  />
-                  <FieldDescription>Min 8 characters</FieldDescription>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) =>
+                        setFormData({ ...formData, password: e.target.value })
+                      }
+                      required
+                      minLength={8}
+                      className="pr-10"
+                    />
+                    {formData.password && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {formData.password.length >= 8 ? (
+                          <Check className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <X className="h-5 w-5 text-red-600" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <FieldDescription className={formData.password && formData.password.length < 8 ? "text-red-600" : ""}>
+                    {formData.password && formData.password.length < 8 
+                      ? `${formData.password.length}/8 characters` 
+                      : "Min 8 characters"}
+                  </FieldDescription>
                 </Field>
 
                 <Field>
                   <FieldLabel htmlFor="confirm-password">
                     Confirm Password *
                   </FieldLabel>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    required
-                    minLength={8}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      required
+                      minLength={8}
+                      className="pr-10"
+                    />
+                    {formData.confirmPassword && (
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {formData.password === formData.confirmPassword ? (
+                          <Check className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <X className="h-5 w-5 text-red-600" />
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <FieldDescription className={formData.confirmPassword && formData.password !== formData.confirmPassword ? "text-red-600" : ""}>
+                    {formData.confirmPassword && formData.password !== formData.confirmPassword
+                      ? "Passwords do not match"
+                      : "Re-enter your password"}
+                  </FieldDescription>
                 </Field>
               </div>
 

@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import RegisterCustomer from "./pages/RegisterCustomer";
 import RegisterShop from "./pages/RegisterShop";
+import { Toaster } from "./components/ui/sonner";
 
 import CustomerPage from "./pages/customer/CustomerPage";
 import FoodsPage from "./components/customer/FoodsPage";
@@ -22,7 +23,9 @@ import OrdersPage from "./components/customer/OrdersPage";
 import ProfilePage from "./components/customer/ProfilePage";
 
 import ShopPage from "./pages/shop/ShopPage";
+import ShopPendingVerification from "./pages/shop/ShopPendingVerification";
 import ShopDashboard from "./components/shop/ShopDashboard";
+import ShopProfile from "./components/shop/ShopProfile";
 import ShopSettings from "./components/shop/ShopSettings";
 import ProductList from "./components/shop/ProductList";
 import ProductCreate from "./components/shop/ProductCreate";
@@ -52,6 +55,7 @@ export default function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/register/customer" element={<RegisterCustomer />} />
           <Route path="/register/shop" element={<RegisterShop />} />
+          <Route path="/shop/pending" element={<ShopPendingVerification />} />
 
           {/* protected customer routes */}
           <Route element={<ProtectedRoute allowedRoles={["customer"]} />}>
@@ -110,6 +114,7 @@ export default function App() {
             <Route path="/shop" element={<ShopPage />}>
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<ShopDashboard />} />
+              <Route path="profile" element={<ShopProfile />} />
               <Route path="products" element={<ProductList />} />
               <Route path="products/new" element={<ProductCreate />} />
               <Route path="products/:id/edit" element={<ProductEdit />} />
@@ -136,6 +141,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>
+      <Toaster />
     </Router>
   );
 }

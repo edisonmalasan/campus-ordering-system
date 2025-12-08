@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,12 +8,12 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
-import { useAuthStore } from "@/store/authStore";
+import { ArrowLeft, Check, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function RegisterShop() {
   const navigate = useNavigate();
-  const { registerShop, isLoading, error, clearError } = useAuthStore();
+  const { registerShop, isLoading, error, clearError } = useAuth();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -25,9 +25,14 @@ export default function RegisterShop() {
     business_permit_code: "",
   });
 
+  // Clear any existing errors when component mounts
+  useEffect(() => {
+    clearError();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    clearError();
 
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match!");
@@ -46,7 +51,7 @@ export default function RegisterShop() {
         delivery_fee: parseFloat(delivery_fee),
       });
 
-      navigate("/shop");
+      navigate("/shop/pending");
     } catch (err) {
       console.error("Registration failed:", err);
     }
@@ -120,36 +125,69 @@ export default function RegisterShop() {
 
                   <Field>
                     <FieldLabel htmlFor="password">Password *</FieldLabel>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={formData.password}
-                      onChange={(e) =>
-                        setFormData({ ...formData, password: e.target.value })
-                      }
-                      required
-                      minLength={8}
-                    />
-                    <FieldDescription>Min 8 characters</FieldDescription>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type="password"
+                        value={formData.password}
+                        onChange={(e) =>
+                          setFormData({ ...formData, password: e.target.value })
+                        }
+                        required
+                        minLength={8}
+                        className="pr-10"
+                      />
+                      {formData.password && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {formData.password.length >= 8 ? (
+                            <Check className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <X className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <FieldDescription className={formData.password && formData.password.length < 8 ? "text-red-600" : ""}>
+                      {formData.password && formData.password.length < 8 
+                        ? `${formData.password.length}/8 characters` 
+                        : "Min 8 characters"}
+                    </FieldDescription>
                   </Field>
 
                   <Field>
                     <FieldLabel htmlFor="confirm-password">
                       Confirm Password *
                     </FieldLabel>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      value={formData.confirmPassword}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          confirmPassword: e.target.value,
-                        })
-                      }
-                      required
-                      minLength={8}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={formData.confirmPassword}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            confirmPassword: e.target.value,
+                          })
+                        }
+                        required
+                        minLength={8}
+                        className="pr-10"
+                      />
+                      {formData.confirmPassword && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {formData.password === formData.confirmPassword ? (
+                            <Check className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <X className="h-5 w-5 text-red-600" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <FieldDescription className={formData.confirmPassword && formData.password !== formData.confirmPassword ? "text-red-600" : ""}>
+                      {formData.confirmPassword && formData.password !== formData.confirmPassword
+                        ? "Passwords do not match"
+                        : "Re-enter your password"}
+                    </FieldDescription>
                   </Field>
 
                   <Field>
@@ -254,8 +292,9 @@ export default function RegisterShop() {
               <Button
                 type="submit"
                 className="w-full bg-blue-600 hover:bg-blue-700 h-11 text-base font-semibold"
+                disabled={isLoading}
               >
-                Create Shop Account
+                {isLoading ? "Creating Account..." : "Create Shop Account"}
               </Button>
 
               <div className="text-center text-sm text-gray-600">
