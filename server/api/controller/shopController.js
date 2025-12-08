@@ -114,7 +114,7 @@ export const addProductItem = async (req, res) => {
   try {
     const userId = req.user.userId;
     const productData = req.body;
-    const productItem = await shopService.addProductItem(userId, productData);
+    const productItem = await shopService.addProduct(userId, productData);
     res.status(201).json({ success: true, data: productItem });
   } catch (error) {
     res
@@ -128,7 +128,7 @@ export const updateProductItem = async (req, res) => {
     const userId = req.user.userId;
     const { id } = req.params;
     const updateData = req.body;
-    const updated = await shopService.updateProductItem(id, userId, updateData);
+    const updated = await shopService.updateProduct(id, userId, updateData);
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
     res
@@ -141,7 +141,7 @@ export const deleteProductItem = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { id } = req.params;
-    const result = await shopService.deleteProductItem(id, userId);
+    const result = await shopService.deleteProduct(id, userId);
     res.status(200).json({ success: true, message: result.message });
   } catch (error) {
     res
@@ -179,6 +179,18 @@ export const getShopNotifications = async (req, res) => {
     const userId = req.user.userId;
     const notifications = await shopService.getNotifications(userId);
     res.status(200).json({ success: true, data: notifications });
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .json({ success: false, error: error.message });
+  }
+};
+
+export const getDashboardStats = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const stats = await shopService.getDashboardStats(userId);
+    res.status(200).json({ success: true, data: stats });
   } catch (error) {
     res
       .status(error.statusCode || 500)
