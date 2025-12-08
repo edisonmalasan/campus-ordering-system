@@ -30,7 +30,19 @@ export interface User {
   email: string;
   name: string;
   role: "customer" | "shop" | "admin";
+  access_level?: "admin" | "base";
   userId?: string;
+  profile_photo_url?: string;
+  createdAt?: string;
+  contact_number?: string;
+  department?: string;
+  gender?: string;
+  student_id?: string;
+  shop_name?: string;
+  business_permit_code?: string;
+  delivery_fee?: number;
+  logo_url?: string;
+  status?: string;
 }
 
 export interface AuthResponse {
@@ -85,5 +97,41 @@ export const logout = async (): Promise<{
   message: string;
 }> => {
   const response = await axiosInstance.post("/auth/logout");
+  return response.data;
+};
+
+export const updatePassword = async (data: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+}> => {
+  const response = await axiosInstance.post("/auth/update-password", data);
+  return response.data;
+};
+
+export const updateProfile = async (data: {
+  name?: string;
+  contact_number?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  data: { user: User };
+}> => {
+  const response = await axiosInstance.put("/auth/profile", data);
+  return response.data;
+};
+
+export const updateShopSettings = async (data: {
+  shop_name?: string;
+  delivery_fee?: number;
+  logo_url?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  data: { user: User };
+}> => {
+  const response = await axiosInstance.put("/auth/shop/settings", data);
   return response.data;
 };
