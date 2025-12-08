@@ -16,9 +16,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 export default function RegisterCustomer() {
   const navigate = useNavigate();
+  const { registerCustomer, isLoading, error, clearError } = useAuthStore();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -30,35 +32,28 @@ export default function RegisterCustomer() {
     gender: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
 
-    // Validate password length
     if (formData.password.length < 8) {
       alert("Password must be at least 8 characters long!");
       return;
     }
 
-    // TODO: API call to register customer
-    console.log("Customer Registration Data:", {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      contact_number: formData.contact_number,
-      student_id: formData.student_id,
-      department: formData.department,
-      gender: formData.gender,
-      role: "customer",
-    });
+    try {
+      const { confirmPassword, ...registrationData } = formData;
+      await registerCustomer(registrationData);
 
-    // Navigate to login after successful registration
-    // navigate("/login");
+      navigate("/customer");
+    } catch (err) {
+      console.error("Registration failed:", err);
+    }
   };
 
   return (
@@ -82,7 +77,12 @@ export default function RegisterCustomer() {
                 </p>
               </div>
 
-              {/* Name and Email in 2 columns on desktop */}
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-600">{error}</p>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="name">Full Name *</FieldLabel>
@@ -113,7 +113,6 @@ export default function RegisterCustomer() {
                 </Field>
               </div>
 
-              {/* Password Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="password">Password *</FieldLabel>
@@ -150,17 +149,21 @@ export default function RegisterCustomer() {
                 </Field>
               </div>
 
-              {/* Contact Number and Student ID */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field>
-                  <FieldLabel htmlFor="contact_number">Contact Number</FieldLabel>
+                  <FieldLabel htmlFor="contact_number">
+                    Contact Number
+                  </FieldLabel>
                   <Input
                     id="contact_number"
                     type="tel"
                     placeholder="+63 912 345 6789"
                     value={formData.contact_number}
                     onChange={(e) =>
-                      setFormData({ ...formData, contact_number: e.target.value })
+                      setFormData({
+                        ...formData,
+                        contact_number: e.target.value,
+                      })
                     }
                   />
                 </Field>
@@ -179,7 +182,6 @@ export default function RegisterCustomer() {
                 </Field>
               </div>
 
-              {/* Department and Gender */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field>
                   <FieldLabel htmlFor="department">Department</FieldLabel>
@@ -214,7 +216,6 @@ export default function RegisterCustomer() {
                 </Field>
               </div>
 
-              {/* Submit Button */}
               <Field>
                 <Button
                   type="submit"

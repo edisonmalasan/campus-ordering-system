@@ -9,9 +9,11 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft } from "lucide-react";
+import { useAuthStore } from "@/store/authStore";
 
 export default function RegisterShop() {
   const navigate = useNavigate();
+  const { registerShop, isLoading, error, clearError } = useAuthStore();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -23,36 +25,31 @@ export default function RegisterShop() {
     business_permit_code: "",
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    clearError();
 
-    // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
       alert("Passwords do not match!");
       return;
     }
 
-    // Validate password length
     if (formData.password.length < 8) {
       alert("Password must be at least 8 characters long!");
       return;
     }
 
-    // TODO: API call to register shop
-    console.log("Shop Registration Data:", {
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      contact_number: formData.contact_number,
-      shop_name: formData.shop_name,
-      delivery_fee: parseFloat(formData.delivery_fee),
-      business_permit_code: formData.business_permit_code,
-      role: "shop",
-      status: "pending", // Shop will be pending verification
-    });
+    try {
+      const { confirmPassword, delivery_fee, ...registrationData } = formData;
+      await registerShop({
+        ...registrationData,
+        delivery_fee: parseFloat(delivery_fee),
+      });
 
-    // Navigate to login after successful registration
-    // navigate("/login");
+      navigate("/shop");
+    } catch (err) {
+      console.error("Registration failed:", err);
+    }
   };
 
   return (
@@ -74,9 +71,14 @@ export default function RegisterShop() {
             </p>
           </div>
 
+          {error && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-4">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left Column - Personal Information */}
               <div className="space-y-4">
                 <div className="pb-2 border-b border-gray-200">
                   <h2 className="font-semibold text-base text-gray-900">
@@ -151,21 +153,25 @@ export default function RegisterShop() {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="contact_number">Contact Number</FieldLabel>
+                    <FieldLabel htmlFor="contact_number">
+                      Contact Number
+                    </FieldLabel>
                     <Input
                       id="contact_number"
                       type="tel"
                       placeholder="+63 912 345 6789"
                       value={formData.contact_number}
                       onChange={(e) =>
-                        setFormData({ ...formData, contact_number: e.target.value })
+                        setFormData({
+                          ...formData,
+                          contact_number: e.target.value,
+                        })
                       }
                     />
                   </Field>
                 </FieldGroup>
               </div>
 
-              {/* Right Column - Business Information */}
               <div className="space-y-4">
                 <div className="pb-2 border-b border-gray-200">
                   <h2 className="font-semibold text-base text-gray-900">
@@ -192,7 +198,9 @@ export default function RegisterShop() {
                   </Field>
 
                   <Field>
-                    <FieldLabel htmlFor="delivery_fee">Delivery Fee (₱) *</FieldLabel>
+                    <FieldLabel htmlFor="delivery_fee">
+                      Delivery Fee (₱) *
+                    </FieldLabel>
                     <Input
                       id="delivery_fee"
                       type="number"
@@ -201,11 +209,16 @@ export default function RegisterShop() {
                       placeholder="20.00"
                       value={formData.delivery_fee}
                       onChange={(e) =>
-                        setFormData({ ...formData, delivery_fee: e.target.value })
+                        setFormData({
+                          ...formData,
+                          delivery_fee: e.target.value,
+                        })
                       }
                       required
                     />
-                    <FieldDescription>Standard delivery charge</FieldDescription>
+                    <FieldDescription>
+                      Standard delivery charge
+                    </FieldDescription>
                   </Field>
 
                   <Field>
@@ -237,7 +250,6 @@ export default function RegisterShop() {
               </div>
             </div>
 
-            {/* Submit Button - Full Width */}
             <div className="mt-6 space-y-4">
               <Button
                 type="submit"

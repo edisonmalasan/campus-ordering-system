@@ -31,81 +31,111 @@ import OrdersList from "./components/shop/OrdersList";
 import DailySales from "./components/shop/DailySales";
 import WeeklySales from "./components/shop/WeeklySales";
 
+import AdminPage from "./pages/admin/AdminPage";
+import AdminDashboard from "./components/admin/AdminDashboard";
+import ShopVerification from "./components/admin/ShopVerification";
+import ManageShops from "./components/admin/ManageShops";
+import ManageCustomers from "./components/admin/ManageCustomers";
+import AllUsers from "./components/admin/AllUsers";
+
+import AuthProvider from "./contexts/AuthProvider";
+import ProtectedRoute from "./components/ProtectedRoute";
+
 export default function App() {
   return (
     <Router>
-      <Routes>
-        {/* pub routes */}
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/register/customer" element={<RegisterCustomer />} />
-        <Route path="/register/shop" element={<RegisterShop />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+      <AuthProvider>
+        <Routes>
+          {/* public routes */}
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/register/customer" element={<RegisterCustomer />} />
+          <Route path="/register/shop" element={<RegisterShop />} />
 
-        <Route path="/customer" element={<CustomerPage />}>
-          <Route index element={<Navigate to="foods" replace />} />
-          <Route
-            path="foods"
-            element={<FoodsPage />}
-            handle={{ title: "Foods" }}
-          />
-          <Route
-            path="store"
-            element={<StorePage />}
-            handle={{ title: "Store" }}
-          />
-          <Route
-            path="store/:id"
-            element={<StoreMenu />}
-            handle={{ title: "{name}" }}
-          />
-          <Route
-            path="cart"
-            element={<CartPage />}
-            handle={{ title: "Your Cart" }}
-          />
-          <Route
-            path="cart/checkout"
-            element={<CheckoutPage />}
-            handle={{ title: "Checkout" }}
-          />
-          <Route
-            path="cart/order-placed"
-            element={<OrderPlacedPage />}
-            handle={{ title: "Order Placed" }}
-          />
-          <Route
-            path="orders"
-            element={<OrdersPage />}
-            handle={{ title: "Your Orders" }}
-          />
-          <Route
-            path="orders/:id"
-            element={<OrderDetails />}
-            handle={{ title: "Order Details" }}
-          />
-          <Route
-            path="profile"
-            element={<ProfilePage />}
-            handle={{ title: "Your Profile" }}
-          />
-        </Route>
-        {/* <Route path="/customer/notifications" element={<Notifications />} /> */}
+          {/* protected customer routes */}
+          <Route element={<ProtectedRoute allowedRoles={["customer"]} />}>
+            <Route path="/customer" element={<CustomerPage />}>
+              <Route index element={<Navigate to="foods" replace />} />
+              <Route
+                path="foods"
+                element={<FoodsPage />}
+                handle={{ title: "Foods" }}
+              />
+              <Route
+                path="store"
+                element={<StorePage />}
+                handle={{ title: "Store" }}
+              />
+              <Route
+                path="store/:id"
+                element={<StoreMenu />}
+                handle={{ title: "{name}" }}
+              />
+              <Route
+                path="cart"
+                element={<CartPage />}
+                handle={{ title: "Your Cart" }}
+              />
+              <Route
+                path="cart/checkout"
+                element={<CheckoutPage />}
+                handle={{ title: "Checkout" }}
+              />
+              <Route
+                path="cart/order-placed"
+                element={<OrderPlacedPage />}
+                handle={{ title: "Order Placed" }}
+              />
+              <Route
+                path="orders"
+                element={<OrdersPage />}
+                handle={{ title: "Your Orders" }}
+              />
+              <Route
+                path="orders/:id"
+                element={<OrderDetails />}
+                handle={{ title: "Order Details" }}
+              />
+              <Route
+                path="profile"
+                element={<ProfilePage />}
+                handle={{ title: "Your Profile" }}
+              />
+            </Route>
+          </Route>
 
-        {/* Shop routes */}
-        <Route path="/shop" element={<ShopPage />}>
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<ShopDashboard />} />
-          <Route path="products" element={<ProductList />} />
-          <Route path="products/new" element={<ProductCreate />} />
-          <Route path="products/:id/edit" element={<ProductEdit />} />
-          <Route path="orders" element={<OrdersList />} />
-          <Route path="reports/daily" element={<DailySales />} />
-          <Route path="reports/weekly" element={<WeeklySales />} />
-          <Route path="settings" element={<ShopSettings />} />
-        </Route>
-      </Routes>
+          {/* protected shop routes */}
+          <Route element={<ProtectedRoute allowedRoles={["shop"]} />}>
+            <Route path="/shop" element={<ShopPage />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<ShopDashboard />} />
+              <Route path="products" element={<ProductList />} />
+              <Route path="products/new" element={<ProductCreate />} />
+              <Route path="products/:id/edit" element={<ProductEdit />} />
+              <Route path="orders" element={<OrdersList />} />
+              <Route path="reports/daily" element={<DailySales />} />
+              <Route path="reports/weekly" element={<WeeklySales />} />
+              <Route path="settings" element={<ShopSettings />} />
+            </Route>
+          </Route>
+
+          {/* protected admin routes */}
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route path="/admin" element={<AdminPage />}>
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="shops/pending" element={<ShopVerification />} />
+              <Route path="shops" element={<ManageShops />} />
+              <Route path="customers" element={<ManageCustomers />} />
+              <Route path="users" element={<AllUsers />} />
+            </Route>
+          </Route>
+
+          {/* redirect any form of routes thats not included into entry route (palitan ko ng 404 not found to) */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
     </Router>
   );
 }
