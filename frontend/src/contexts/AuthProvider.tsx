@@ -1,12 +1,12 @@
 import { useEffect } from "react";
-import { useAuthStore } from "../store/authStore";
+import { useAuth } from "../hooks/useAuth";
 
 interface AuthProviderProps {
   children: React.ReactNode;
 }
 
 export default function AuthProvider({ children }: AuthProviderProps) {
-  const { initializeAuth, isLoading } = useAuthStore();
+  const { initializeAuth, isLoading } = useAuth();
 
   useEffect(() => {
     initializeAuth();
