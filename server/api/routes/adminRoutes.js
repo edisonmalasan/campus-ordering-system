@@ -1,25 +1,23 @@
 import express from "express";
 import {
-  getAllUsers,
-  updateUserStatus,
+  getPendingShops,
   getAllShops,
-  verifyShop,
-  updateShopStatus,
-  getAllOrders,
-  getPlatformOverviewReport,
+  approveShop,
+  rejectShop,
+  getAllCustomers,
+  getAllUsers,
+  getDashboardStats,
 } from "../controller/adminController.js";
-import { validateToken, requireRole } from "../../middleware/authMiddleware.js";
+import { validateToken } from "../../middleware/authMiddleware.js";
 
 const adminRouter = express.Router();
 
-adminRouter.use(validateToken(), requireRole("admin"));
-
-adminRouter.get("/users", getAllUsers);
-adminRouter.put("/users/:id/status", updateUserStatus);
+adminRouter.use(validateToken());
+adminRouter.get("/dashboard/stats", getDashboardStats);
+adminRouter.get("/shops/pending", getPendingShops);
 adminRouter.get("/shops", getAllShops);
-adminRouter.put("/shops/:id/verify", verifyShop);
-adminRouter.put("/shops/:id/status", updateShopStatus);
-adminRouter.get("/orders", getAllOrders);
-adminRouter.get("/reports/overview", getPlatformOverviewReport);
-
+adminRouter.put("/shops/:id/approve", approveShop);
+adminRouter.put("/shops/:id/reject", rejectShop);
+adminRouter.get("/customers", getAllCustomers);
+adminRouter.get("/users", getAllUsers);
 export default adminRouter;

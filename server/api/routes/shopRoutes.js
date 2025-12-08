@@ -14,6 +14,7 @@ import {
   getDailySalesReport,
   getWeeklySalesReport,
   getShopNotifications,
+  getDashboardStats,
 } from "../controller/shopController.js";
 import { validateToken, requireRole } from "../../middleware/authMiddleware.js";
 
@@ -23,6 +24,7 @@ shopRouter.use(validateToken(), requireRole("shop"));
 
 shopRouter.get("/profile", getShopProfile);
 shopRouter.put("/profile", updateShopProfile);
+shopRouter.get("/dashboard/stats", getDashboardStats);
 shopRouter.get("/product", getShopProduct);
 shopRouter.post("/product", addProductItem);
 shopRouter.put("/product/:id", updateProductItem);
