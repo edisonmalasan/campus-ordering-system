@@ -199,7 +199,6 @@ export default function CartPage() {
                     </div>
                   </div>
 
-                  {/*  item list */}
                   <div className="divide-y divide-gray-50">
                     {items.map((item) => (
                       <div
@@ -248,7 +247,6 @@ export default function CartPage() {
                               ₱ {item.price.toFixed(0)}
                             </p>
 
-                            {/* Qty Controls */}
                             <div className="flex items-center bg-white border border-gray-200 rounded-lg h-8 shadow-sm">
                               <button
                                 className="px-2.5 h-full text-gray-500 hover:bg-gray-50 rounded-l-lg hover:text-gray-900 disabled:opacity-50"
@@ -278,7 +276,6 @@ export default function CartPage() {
           )}
         </div>
 
-        {/* sticky footer */}
         <div
           className={`
             ${

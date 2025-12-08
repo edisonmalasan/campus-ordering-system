@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Plus, ShoppingCart, ArrowLeft } from "lucide-react";
+import { Plus, ShoppingCart, ArrowLeft, Clock, MapPin } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,104 +37,159 @@ export default function StoreMenu() {
   const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
-    <div className="min-h-screen bg-background pb-20 p-4">
-      <div className="mb-4">
+    <div className="min-h-screen bg-background pb-24">
+      <div className="sticky top-0 z-10 bg-white/80 backdrop-blur-lg border-b border-gray-200/50 p-4">
         <Link to="/customer/store">
-          <Button variant="outline" size="sm" className="gap-2 pl-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 pl-2 hover:bg-green-50 hover:border-green-500 transition-colors"
+          >
             <ArrowLeft className="h-4 w-4" />
             Back to Shops
           </Button>
         </Link>
       </div>
 
-      <div className="mb-8">
-        <Card className="overflow-hidden border-none shadow-md bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950">
-          <div className="h-24 bg-gradient-to-r from-green-600/10 to-blue-600/10 dark:from-green-900/20 dark:to-blue-900/20 relative"></div>
+      <div className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        <Card className="overflow-hidden border-0 shadow-xl">
+          <div className="h-32 bg-gradient-to-br from-green-600 via-green-500 to-emerald-600 relative">
+            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+            <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl"></div>
+          </div>
+
           <CardContent className="px-6 pb-6 relative">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-12 text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-16 text-center sm:text-left">
               <div
-                className={`bg-white dark:bg-gray-900 p-1.5 rounded-full shadow-lg shrink-0 ${
-                  isMobile ? "w-24 h-24" : "w-28 h-28"
-                }`}
+                className={`relative ${isMobile ? "w-28 h-28" : "w-32 h-32"}`}
               >
-                <img
-                  src={shop.logo_url}
-                  alt={shop.shop_name}
-                  className="w-full h-full object-contain rounded-full bg-white"
-                />
+                <div className="absolute inset-0 bg-white rounded-2xl shadow-2xl -rotate-3"></div>
+                <div className="relative bg-white p-3 rounded-2xl shadow-2xl ring-4 ring-white">
+                  <img
+                    src={shop.logo_url}
+                    alt={shop.shop_name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
               </div>
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center justify-center sm:justify-start gap-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold leading-tight">
+
+              <div className="flex-1 space-y-3">
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                     {shop.shop_name}
                   </h1>
                   {shop.status === "verified" && (
-                    <Badge
-                      variant="secondary"
-                      className="bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 gap-1 px-2 py-0.5 h-6"
-                    >
-                      <span className="text-[10px]">VERIFIED</span>
+                    <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">
+                      ✓ VERIFIED
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground max-w-2xl">
-                  {shop.description}
-                </p>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-sm">15-20 min</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-gray-600">
+                    <MapPin className="h-4 w-4" />
+                    <span className="text-sm">Campus Location</span>
+                  </div>
+                  <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
+                    <div className="flex items-center gap-1.5">
+                      <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                      Open Now
+                    </div>
+                  </Badge>
+                </div>
               </div>
+            </div>
+
+            <div className="px-6 pb-4 pt-8">
+              <p className="text-sm text-gray-600">{shop.description}</p>
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      <div
-        className={`grid gap-4 ${
-          isMobile ? "grid-cols-1" : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-        }`}
-      >
-        {filteredFoods.map((food) => (
-          <Card
-            key={food.id}
-            className="overflow-hidden hover:shadow-lg transition-shadow"
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-bold text-xl text-gray-900 flex items-center gap-2">
+              <div className="h-1 w-1 rounded-full bg-green-600"></div>
+              Menu
+            </h2>
+            <span className="text-sm text-gray-500 font-medium">
+              {filteredFoods.length} items
+            </span>
+          </div>
+
+          <div
+            className={`grid gap-4 ${
+              isMobile
+                ? "grid-cols-1"
+                : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            }`}
           >
-            <CardContent className="p-0">
-              <div className="relative">
-                <img
-                  src={food.image}
-                  alt={food.name}
-                  className="w-full h-48 object-cover"
-                />
-                <Badge className="absolute top-2 right-2">
-                  {food.category}
-                </Badge>
-              </div>
-              <div className="p-4">
-                <h4 className="font-semibold text-base mb-1">{food.name}</h4>
-                <div className="flex items-center justify-between mt-3">
-                  <span className="text-lg font-bold text-primary">
-                    ₱ {food.price.toFixed(2)}
-                  </span>
-                  <Button
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => addToCart(food)}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Add
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+            {filteredFoods.map((food) => (
+              <Card
+                key={food.id}
+                className="group overflow-hidden border-2 border-gray-100 hover:border-green-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
+              >
+                <CardContent className="p-0">
+                  <div className="relative overflow-hidden">
+                    <img
+                      src={food.image}
+                      alt={food.name}
+                      className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <Badge className="absolute top-3 right-3 bg-white/95 text-gray-800 border-0 shadow-lg backdrop-blur-sm">
+                      {food.category}
+                    </Badge>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <h4 className="font-bold text-base text-gray-900 line-clamp-1 group-hover:text-green-700 transition-colors">
+                      {food.name}
+                    </h4>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                        ₱{food.price.toFixed(2)}
+                      </span>
+                      <Button
+                        size="sm"
+                        className="gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg shadow-green-500/30 hover:shadow-xl hover:scale-105 transition-all"
+                        onClick={() => addToCart(food)}
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
 
       <Link to="/customer/cart">
         <Button
           size="lg"
-          className="fixed bottom-6 right-6 rounded-full h-16 w-16 shadow-lg z-50 hover:scale-110 transition-transform text-lg font-bold"
+          className={`
+            fixed bottom-6 right-6 
+            ${cartItemCount > 0 ? "h-16 w-16" : "h-14 w-14"}
+            rounded-full shadow-2xl z-50 
+            bg-gradient-to-r from-green-600 to-emerald-600 
+            hover:from-green-700 hover:to-emerald-700
+            border-4 border-white
+            transition-all hover:scale-110 active:scale-95
+            ${cartItemCount > 0 ? "animate-bounce" : ""}
+          `}
         >
           {cartItemCount > 0 ? (
-            <span className="text-xl">{cartItemCount}</span>
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-bold">{cartItemCount}</span>
+              <span className="text-[10px] opacity-90">items</span>
+            </div>
           ) : (
             <ShoppingCart className="h-6 w-6" />
           )}

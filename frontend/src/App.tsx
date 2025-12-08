@@ -21,6 +21,16 @@ import OrderDetails from "./components/customer/OrderDetails";
 import OrdersPage from "./components/customer/OrdersPage";
 import ProfilePage from "./components/customer/ProfilePage";
 
+import ShopPage from "./pages/shop/ShopPage";
+import ShopDashboard from "./components/shop/ShopDashboard";
+import ShopSettings from "./components/shop/ShopSettings";
+import ProductList from "./components/shop/ProductList";
+import ProductCreate from "./components/shop/ProductCreate";
+import ProductEdit from "./components/shop/ProductEdit";
+import OrdersList from "./components/shop/OrdersList";
+import DailySales from "./components/shop/DailySales";
+import WeeklySales from "./components/shop/WeeklySales";
+
 export default function App() {
   return (
     <Router>
@@ -82,6 +92,19 @@ export default function App() {
           />
         </Route>
         {/* <Route path="/customer/notifications" element={<Notifications />} /> */}
+
+        {/* Shop routes */}
+        <Route path="/shop" element={<ShopPage />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<ShopDashboard />} />
+          <Route path="products" element={<ProductList />} />
+          <Route path="products/new" element={<ProductCreate />} />
+          <Route path="products/:id/edit" element={<ProductEdit />} />
+          <Route path="orders" element={<OrdersList />} />
+          <Route path="reports/daily" element={<DailySales />} />
+          <Route path="reports/weekly" element={<WeeklySales />} />
+          <Route path="settings" element={<ShopSettings />} />
+        </Route>
       </Routes>
     </Router>
   );

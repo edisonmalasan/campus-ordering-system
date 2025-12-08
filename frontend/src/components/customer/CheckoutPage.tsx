@@ -19,10 +19,9 @@ export default function CheckoutPage() {
   const location = useLocation();
   const isMobile = useIsMobile();
 
-  // Get items passed from Cart
   const checkoutItems = (location.state?.items as CartItem[]) || [];
 
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "gcash">("cod");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
   const [showGCashModal, setShowGCashModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -75,7 +74,7 @@ export default function CheckoutPage() {
   const handlePlaceOrder = () => {
     navigate("/customer/cart/order-placed", {
       state: {
-        paymentMethod: paymentMethod === "cod" ? "Cash on Delivery" : "GCash",
+        paymentMethod: paymentMethod === "cash" ? "Cash on Delivery" : "GCash",
         total,
         address,
         items: checkoutItems, // Pass items to order placed if needed
@@ -180,7 +179,7 @@ export default function CheckoutPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label
                 className={`cursor-pointer border rounded-xl p-4 flex items-start gap-4 transition-all ${
-                  paymentMethod === "cod"
+                  paymentMethod === "cash"
                     ? "border-green-600 bg-green-50/30 ring-1 ring-green-600"
                     : "border-gray-200 hover:border-green-200"
                 }`}
@@ -189,8 +188,8 @@ export default function CheckoutPage() {
                   type="radio"
                   name="payment"
                   className="mt-1"
-                  checked={paymentMethod === "cod"}
-                  onChange={() => setPaymentMethod("cod")}
+                  checked={paymentMethod === "cash"}
+                  onChange={() => setPaymentMethod("cash")}
                 />
                 <div>
                   <span className="font-bold block text-gray-900">
@@ -236,12 +235,28 @@ export default function CheckoutPage() {
               <StickyNote className="h-5 w-5 text-green-600" /> Note to
               Store/Rider
             </h2>
-            <textarea
-              className="w-full min-h-[100px] p-4 text-sm border border-gray-200 rounded-xl focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all resize-none bg-white"
-              placeholder="Any special requests? e.g. extra sauce, no plastic cutlery..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
+            <div className="space-y-2">
+              <textarea
+                className="w-full min-h-[100px] p-4 text-sm border border-gray-200 rounded-xl focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all resize-none bg-white"
+                placeholder="Any special requests? e.g. extra sauce, no plastic cutlery..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={200}
+              />
+              <div className="flex justify-end">
+                <span
+                  className={`text-xs font-medium transition-colors ${
+                    note.length >= 200
+                      ? "text-red-600"
+                      : note.length > 180
+                      ? "text-amber-600"
+                      : "text-gray-400"
+                  }`}
+                >
+                  {note.length}/200 characters
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -3,27 +3,38 @@ import {
   SidebarTrigger,
   SidebarInset,
 } from "../../components/ui/sidebar";
-import { AppSidebar } from "../../components/customer/CustomerSidebar";
+import { ShopSidebar } from "../../components/shop/ShopSidebar";
 import { Outlet } from "react-router-dom";
 import { Separator } from "../../components/ui/separator";
-import { Link, useLocation, useMatches } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 const pageTitles: Record<string, string> = {
-  "/customer/foods": "Foods",
-  "/customer/store": "Store",
-  "/customer/shops": "Shops",
-  "/customer/cart": "Your Cart",
-  "/customer/orders": "Your Orders",
-  "/customer/profile": "Your Profile",
+  "/shop/dashboard": "Dashboard",
+  "/shop/products": "Products",
+  "/shop/products/new": "Add Product",
+  "/shop/orders": "Orders",
+  "/shop/reports/daily": "Daily Sales Report",
+  "/shop/reports/weekly": "Weekly Sales Report",
+  "/shop/settings": "Business Settings",
 };
 
-export default function CustomerPage() {
+export default function ShopPage() {
   const location = useLocation();
 
-  const title = pageTitles[location.pathname] || "NaviBites";
+  // TODO: endpoints /shop/products/:id/edit
+  let title = pageTitles[location.pathname];
+  if (
+    !title &&
+    location.pathname.includes("/shop/products/") &&
+    location.pathname.includes("/edit")
+  ) {
+    title = "Edit Product";
+  }
+  title = title || "NaviBites Shop";
+
   return (
     <SidebarProvider>
-      <AppSidebar variant="inset" />
+      <ShopSidebar variant="inset" />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
