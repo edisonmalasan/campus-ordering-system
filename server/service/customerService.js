@@ -93,15 +93,13 @@ export const getAvailableShops = async () => {
     .sort({ shop_name: 1 });
 
   return shops.map((shop) => ({
-    id: shop._id,
-    name: shop.name,
-    email: shop.email,
-    shop_name: shop.shop_name,
-    logo_url: shop.logo_url,
-    delivery_radius: shop.delivery_radius,
-    delivery_fee: shop.delivery_fee,
-    operating_hours: shop.operating_hours,
-    isTemporarilyClosed: shop.isTemporarilyClosed,
+      id: shop._id,
+      shop_name: shop.shop_name,
+      logo_url: shop.logo_url,
+      delivery_fee: shop.delivery_fee,
+      operating_hours: shop.operating_hours,
+      status: shop.status,
+      isTemporarilyClosed: shop.isTemporarilyClosed,
   }));
 };
 

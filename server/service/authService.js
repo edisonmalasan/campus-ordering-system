@@ -2,7 +2,7 @@ import { User } from "../models/userModel.js";
 import { Customer } from "../models/customerModel.js";
 import { Shop } from "../models/shopModel.js";
 import bcrypt from "bcrypt";
-import { generateToken } from "../utility/jwtUtil.js";
+import { generateToken, generateRefreshToken } from "../utility/jwtUtil.js";
 
 export const login = async (email, password) => {
   const user = await User.findOne({ email: email.toLowerCase() });
@@ -33,8 +33,15 @@ export const login = async (email, password) => {
     role: user.role,
   });
 
+  const refreshToken = generateRefreshToken({
+    userId: user._id,
+    email: user.email,
+    role: user.role,
+  });
+
   return {
     token,
+    refreshToken,
     user: {
       id: user._id,
       email: user.email,
@@ -72,8 +79,15 @@ export const registerCustomer = async (userData) => {
     role: "customer",
   });
 
+  const refreshToken = generateRefreshToken({
+    userId: customer._id,
+    email: customer.email,
+    role: "customer",
+  });
+
   return {
     token,
+    refreshToken,
     user: {
       id: customer._id,
       email: customer.email,
@@ -105,7 +119,6 @@ export const registerShop = async (userData) => {
     password: hashedPassword,
     shop_name: userData.shop_name,
     contact_number: userData.contact_number,
-    delivery_radius: userData.delivery_radius,
     delivery_fee: userData.delivery_fee,
     business_permit_url: userData.business_permit_url,
     status: "pending",
@@ -117,8 +130,15 @@ export const registerShop = async (userData) => {
     role: "shop",
   });
 
+  const refreshToken = generateRefreshToken({
+    userId: shop._id,
+    email: shop.email,
+    role: "shop",
+  });
+
   return {
     token,
+    refreshToken,
     user: {
       id: shop._id,
       name: shop.name,

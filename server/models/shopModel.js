@@ -23,7 +23,6 @@ const hoursSchema = new mongoose.Schema({
 const shopSchema = new mongoose.Schema({
   shop_name: { type: String, required: true },
   logo_url: { type: String },
-  delivery_radius: { type: Number, required: true },
   delivery_fee: { type: Number, required: true },
   business_permit_code: { type: String },
   operating_hours: [hoursSchema],
