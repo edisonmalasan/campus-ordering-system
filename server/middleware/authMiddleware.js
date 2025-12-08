@@ -26,10 +26,6 @@ const validateToken = () => {
         return res.status(401).json({ error: "User not found" });
       }
 
-      if (user.status !== "active") {
-        return res.status(403).json({ error: "User account is inactive" });
-      }
-
       // attach user object to the req
       req.user = {
         userId: user._id,
