@@ -1,14 +1,87 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight, Store, MapPin } from "lucide-react";
-
-import { shops } from "@/data/shops";
+import { ChevronRight, Store, MapPin, Loader2 } from "lucide-react";
+import * as customerApi from "@/lib/api/customer";
 
 export default function StorePage() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
+  const [shops, setShops] = useState<customerApi.Shop[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchShops = async () => {
+      try {
+        setIsLoading(true);
+        const response = await customerApi.getShops();
+        setShops(response.data || []);
+      } catch (err: any) {
+        console.error("Error fetching shops:", err);
+        setError(err.response?.data?.error || "Failed to load shops");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchShops();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading shops...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Store className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Error Loading Shops</h3>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (shops.length === 0) {
+    return (
+      <div className="min-h-screen bg-background pb-20">
+        <div className="max-w-7xl mx-auto p-4 lg:p-6">
+          <div className="space-y-2 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-1 bg-gradient-to-b from-green-600 to-emerald-600 rounded-full"></div>
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                  All Shops
+                </h1>
+                <p className="text-sm text-gray-500 mt-1">
+                  Discover amazing food from campus vendors
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center py-20">
+            <Store className="h-20 w-20 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No Shops Available</h3>
+            <p className="text-gray-600 mb-6">
+              There are no shops registered yet. Check back soon!
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -21,14 +94,14 @@ export default function StorePage() {
                 All Shops
               </h1>
               <p className="text-sm text-gray-500 mt-1">
-                Discover amazing food from campus vendors
+                Discover amazing food from campus vendors ({shops.length} {shops.length === 1 ? "shop" : "shops"})
               </p>
             </div>
           </div>
         </div>
 
         <div
-          className={`grid gap-4 ${
+          className={` grid gap-4 ${
             isMobile
               ? "grid-cols-1"
               : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
@@ -50,11 +123,15 @@ export default function StorePage() {
                         <div className="relative">
                           <div className="absolute inset-0 bg-white rounded-xl blur-sm"></div>
                           <div className="relative bg-white p-3 rounded-xl shadow-lg ring-2 ring-green-500/20">
-                            <img
-                              src={shop.logo_url}
-                              alt={shop.shop_name}
-                              className="w-16 h-16 object-contain"
-                            />
+                            {shop.logo_url ? (
+                              <img
+                                src={shop.logo_url}
+                                alt={shop.shop_name}
+                                className="w-16 h-16 object-contain"
+                              />
+                            ) : (
+                              <Store className="w-16 h-16 text-green-600" />
+                            )}
                           </div>
                         </div>
                         <div>
@@ -72,17 +149,20 @@ export default function StorePage() {
                   </div>
 
                   <div className="p-5 space-y-4">
-                    <p className="text-sm text-gray-600 line-clamp-2">
-                      {shop.description}
-                    </p>
-
                     <div className="pt-3 border-t border-gray-100">
                       <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
-                        <div className="flex items-center gap-1.5">
-                          <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                          Open
-                        </div>
+                        ₱{shop.delivery_fee.toFixed(2)} delivery
                       </Badge>
+                      {shop.isTemporarilyClosed && (
+                        <Badge variant="outline" className="ml-2 bg-red-50 text-red-700 border-red-300">
+                          Temporarily Closed
+                        </Badge>
+                      )}
+                      {shop.status === "verified" && (
+                        <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-300">
+                          Verified
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -90,20 +170,6 @@ export default function StorePage() {
             </div>
           ))}
         </div>
-
-        {shops.length === 0 && (
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100 mb-4">
-              <Store className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No shops available
-            </h3>
-            <p className="text-sm text-gray-500">
-              Check back later for new vendors
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -1,40 +1,81 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
-import { Plus, ShoppingCart, ArrowLeft, Clock, MapPin } from "lucide-react";
+import {
+  Plus,
+  ShoppingCart,
+  ArrowLeft,
+  Loader2,
+  Store,
+  Package,
+} from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-import { shops } from "@/data/shops";
-import { foodItems, type FoodItem } from "@/data/foods";
-
-interface CartItem extends FoodItem {
-  quantity: number;
-}
+import * as customerApi from "@/lib/api/customer";
+import { toast } from "sonner";
 
 export default function StoreMenu() {
   const { id } = useParams();
   const isMobile = useIsMobile();
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const shop = shops.find((s) => s._id === id) || shops[0];
+  const [products, setProducts] = useState<customerApi.Product[]>([]);
+  const [shop, setShop] = useState<customerApi.Shop | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // TODO: Implement filter by shopId: foodItems.filter(item => item.shopId === id)
-  const filteredFoods = foodItems;
-
-  const addToCart = (food: FoodItem) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.id === food.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === food.id ? { ...item, quantity: item.quantity + 1 } : item
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!id) return;
+      try {
+        setIsLoading(true);
+        const shopsResponse = await customerApi.getShops();
+        const foundShop = shopsResponse.data.find(
+          (s: customerApi.Shop) => s._id === id
         );
+        setShop(foundShop || null);
+
+        const productsResponse = await customerApi.getShopProducts(id);
+        setProducts(productsResponse.data || []);
+      } catch (error) {
+        console.error("Error fetching shop data:", error);
+        toast.error("Failed to load shop menu");
+      } finally {
+        setIsLoading(false);
       }
-      return [...prev, { ...food, quantity: 1 }];
-    });
+    };
+    fetchData();
+  }, [id]);
+
+  const handleAddToCart = async (productId: string) => {
+    try {
+      await customerApi.addToCart(productId, 1);
+      toast.success("Added to cart");
+    } catch (error: any) {
+      console.error("Error adding to cart:", error);
+      toast.error(error.response?.data?.error || "Failed to add to cart");
+    }
   };
 
-  const cartItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  if (!shop) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Store className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Shop Not Found</h3>
+          <Link to="/customer/store">
+            <Button>Browse All Shops</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -55,144 +96,126 @@ export default function StoreMenu() {
         <Card className="overflow-hidden border-0 shadow-xl">
           <div className="h-32 bg-gradient-to-br from-green-600 via-green-500 to-emerald-600 relative">
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-            <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl"></div>
           </div>
 
           <CardContent className="px-6 pb-6 relative">
-            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-16 text-center sm:text-left">
-              <div
-                className={`relative ${isMobile ? "w-28 h-28" : "w-32 h-32"}`}
-              >
+            <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 -mt-16">
+              <div className="relative w-32 h-32">
                 <div className="absolute inset-0 bg-white rounded-2xl shadow-2xl -rotate-3"></div>
                 <div className="relative bg-white p-3 rounded-2xl shadow-2xl ring-4 ring-white">
-                  <img
-                    src={shop.logo_url}
-                    alt={shop.shop_name}
-                    className="w-full h-full object-contain"
-                  />
+                  {shop.logo_url ? (
+                    <img
+                      src={shop.logo_url}
+                      alt={shop.shop_name}
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <Store className="w-full h-full text-green-600" />
+                  )}
                 </div>
               </div>
 
-              <div className="flex-1 space-y-3">
-                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-2">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-                    {shop.shop_name}
-                  </h1>
+              <div className="flex-1 space-y-2">
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {shop.shop_name}
+                </h1>
+                <div className="flex flex-wrap gap-2">
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+                    ₱{shop.delivery_fee.toFixed(2)} delivery
+                  </Badge>
                   {shop.status === "verified" && (
-                    <Badge className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-100">
-                      ✓ VERIFIED
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-50 text-blue-700 border-blue-300"
+                    >
+                      Verified
+                    </Badge>
+                  )}
+                  {shop.isTemporarilyClosed && (
+                    <Badge
+                      variant="outline"
+                      className="bg-red-50 text-red-700 border-red-300"
+                    >
+                      Temporarily Closed
                     </Badge>
                   )}
                 </div>
-
-                <div className="flex flex-wrap items-center gap-4">
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <Clock className="h-4 w-4" />
-                    <span className="text-sm">15-20 min</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    <span className="text-sm">Campus Location</span>
-                  </div>
-                  <Badge className="bg-green-100 text-green-700 border-green-200 hover:bg-green-100">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                      Open Now
-                    </div>
-                  </Badge>
-                </div>
               </div>
-            </div>
-
-            <div className="px-6 pb-4 pt-8">
-              <p className="text-sm text-gray-600">{shop.description}</p>
             </div>
           </CardContent>
         </Card>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-bold text-xl text-gray-900 flex items-center gap-2">
-              <div className="h-1 w-1 rounded-full bg-green-600"></div>
-              Menu
-            </h2>
-            <span className="text-sm text-gray-500 font-medium">
-              {filteredFoods.length} items
-            </span>
-          </div>
-
-          <div
-            className={`grid gap-4 ${
-              isMobile
-                ? "grid-cols-1"
-                : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            }`}
-          >
-            {filteredFoods.map((food) => (
-              <Card
-                key={food.id}
-                className="group overflow-hidden border-2 border-gray-100 hover:border-green-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer"
-              >
-                <CardContent className="p-0">
-                  <div className="relative overflow-hidden">
-                    <img
-                      src={food.image}
-                      alt={food.name}
-                      className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <Badge className="absolute top-3 right-3 bg-white/95 text-gray-800 border-0 shadow-lg backdrop-blur-sm">
-                      {food.category}
-                    </Badge>
-                  </div>
-                  <div className="p-4 space-y-3">
-                    <h4 className="font-bold text-base text-gray-900 line-clamp-1 group-hover:text-green-700 transition-colors">
-                      {food.name}
-                    </h4>
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Menu</h2>
+          {products.length === 0 ? (
+            <div className="text-center py-16">
+              <Package className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No Products Available
+              </h3>
+              <p className="text-gray-600">
+                This shop hasn't added any products yet
+              </p>
+            </div>
+          ) : (
+            <div
+              className={`grid gap-4 ${
+                isMobile ? "grid-cols-1" : "grid-cols-2 lg:grid-cols-3"
+              }`}
+            >
+              {products.map((product) => (
+                <Card
+                  key={product._id}
+                  className="overflow-hidden hover:shadow-lg transition-shadow"
+                >
+                  <CardContent className="p-4">
+                    {product.image_url && (
+                      <img
+                        src={product.image_url}
+                        alt={product.name}
+                        className="w-full h-40 object-cover rounded-lg mb-3"
+                      />
+                    )}
+                    <h3 className="font-bold text-lg mb-1">{product.name}</h3>
+                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                      {product.description}
+                    </p>
                     <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                        ₱{food.price.toFixed(2)}
+                      <span className="text-xl font-bold text-green-600">
+                        ₱{product.price.toFixed(2)}
                       </span>
                       <Button
                         size="sm"
-                        className="gap-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-lg shadow-green-500/30 hover:shadow-xl hover:scale-105 transition-all"
-                        onClick={() => addToCart(food)}
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => handleAddToCart(product._id)}
+                        disabled={!product.availability}
                       >
-                        <Plus className="h-4 w-4" />
-                        Add
+                        <Plus className="h-4 w-4 mr-1" />
+                        {product.availability ? "Add" : "Unavailable"}
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    {!product.availability && (
+                      <Badge
+                        variant="outline"
+                        className="mt-2 bg-gray-100 text-gray-600"
+                      >
+                        Out of Stock
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       <Link to="/customer/cart">
         <Button
-          size="lg"
-          className={`
-            fixed bottom-6 right-6 
-            ${cartItemCount > 0 ? "h-16 w-16" : "h-14 w-14"}
-            rounded-full shadow-2xl z-50 
-            bg-gradient-to-r from-green-600 to-emerald-600 
-            hover:from-green-700 hover:to-emerald-700
-            border-4 border-white
-            transition-all hover:scale-110 active:scale-95
-            ${cartItemCount > 0 ? "animate-bounce" : ""}
-          `}
+          className="fixed bottom-6 right-6 rounded-full h-14 w-14 shadow-2xl bg-green-600 hover:bg-green-700"
+          size="icon"
         >
-          {cartItemCount > 0 ? (
-            <div className="flex flex-col items-center">
-              <span className="text-2xl font-bold">{cartItemCount}</span>
-              <span className="text-[10px] opacity-90">items</span>
-            </div>
-          ) : (
-            <ShoppingCart className="h-6 w-6" />
-          )}
+          <ShoppingCart className="h-6 w-6" />
         </Button>
       </Link>
     </div>
