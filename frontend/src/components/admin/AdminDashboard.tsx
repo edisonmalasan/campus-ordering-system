@@ -1,186 +1,110 @@
+import { useState, useEffect } from "react";
+import { Store, Users, Clock, CheckCircle2, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  IconUsers,
-  IconBuildingStore,
-  IconUserCheck,
-  IconShieldCheck,
-} from "@tabler/icons-react";
+import * as adminApi from "@/lib/api/admin";
+import { toast } from "sonner";
 
 export default function AdminDashboard() {
-  // TODO: Replace with actual data from API
-  const stats = {
-    totalUsers: 150,
-    totalCustomers: 120,
-    totalShops: 25,
-    pendingShops: 5,
-    activeShops: 18,
-    verifiedShops: 20,
+  const [stats, setStats] = useState<adminApi.DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStats = async () => {
+    try {
+      setLoading(true);
+      const response = await adminApi.getDashboardStats();
+      if (response.success) {
+        setStats(response.data);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to fetch dashboard stats");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return <div className="flex items-center justify-center h-64">Loading dashboard...</div>;
+  }
+
+  const statCards = [
+    {
+      title: "Total Shops",
+      value: stats?.totalShops || 0,
+      icon: Store,
+      color: "bg-blue-500",
+      bgColor: "bg-blue-50",
+    },
+    {
+      title: "Verified Shops",
+      value: stats?.verifiedShops || 0,
+      icon: CheckCircle2,
+      color: "bg-green-500",
+      bgColor: "bg-green-50",
+    },
+    {
+      title: "Pending Verification",
+      value: stats?.pendingShops || 0,
+      icon: Clock,
+      color: "bg-yellow-500",
+      bgColor: "bg-yellow-50",
+    },
+    {
+      title: "Total Customers",
+      value: stats?.totalCustomers || 0,
+      icon: Users,
+      color: "bg-purple-500",
+      bgColor: "bg-purple-50",
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-gray-600">Overview of your campus ordering system</p>
+        <h2 className="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+        <p className="text-gray-500">Welcome back, Admin</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-purple-600">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-            <IconUsers className="h-5 w-5 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.totalUsers}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              All registered accounts
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.title}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  {stat.title}
+                </CardTitle>
+                <div className={`${stat.bgColor} p-2 rounded-lg`}>
+                  <Icon className={`h-5 w-5 text-${stat.color.replace('bg-', '')}`} />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{stat.value}</div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
-        <Card className="border-l-4 border-l-green-600">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Customers</CardTitle>
-            <IconUserCheck className="h-5 w-5 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.totalCustomers}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              Active customer accounts
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-600">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Shops</CardTitle>
-            <IconBuildingStore className="h-5 w-5 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.totalShops}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.verifiedShops} verified shops
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-600">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Pending Verification
+      {stats && stats.pendingShops > 0 && (
+        <Card className="border-2 border-yellow-200 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-900">
+              <Clock className="h-5 w-5" />
+              Action Required
             </CardTitle>
-            <IconShieldCheck className="h-5 w-5 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.pendingShops}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              Shops awaiting approval
+            <p className="text-yellow-800">
+              You have <strong>{stats.pendingShops}</strong> shop(s) waiting for verification.
+              Please review them in the "Pending Verification" section.
             </p>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Shop Registrations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* TODO: Replace with actual data */}
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Emerson Canteen</p>
-                  <p className="text-sm text-gray-500">Pending verification</p>
-                </div>
-                <span className="text-xs text-gray-400">2 hours ago</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Campus Cafe</p>
-                  <p className="text-sm text-gray-500">Pending verification</p>
-                </div>
-                <span className="text-xs text-gray-400">5 hours ago</span>
-              </div>
-              <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">Snack Bar</p>
-                  <p className="text-sm text-gray-500">Verified</p>
-                </div>
-                <span className="text-xs text-gray-400">1 day ago</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>System Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">New customer registered</p>
-                  <p className="text-xs text-gray-500">30 minutes ago</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">
-                    Shop verified: Campus Cafe
-                  </p>
-                  <p className="text-xs text-gray-500">1 hour ago</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-amber-600 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">New shop registration</p>
-                  <p className="text-xs text-gray-500">2 hours ago</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 bg-purple-600 rounded-full"></div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">
-                    Customer account updated
-                  </p>
-                  <p className="text-xs text-gray-500">3 hours ago</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-600 hover:bg-purple-50 transition-colors">
-              <IconShieldCheck className="h-6 w-6 mx-auto mb-2 text-purple-600" />
-              <p className="text-sm font-medium">Verify Shops</p>
-            </button>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-colors">
-              <IconBuildingStore className="h-6 w-6 mx-auto mb-2 text-blue-600" />
-              <p className="text-sm font-medium">Manage Shops</p>
-            </button>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-600 hover:bg-green-50 transition-colors">
-              <IconUserCheck className="h-6 w-6 mx-auto mb-2 text-green-600" />
-              <p className="text-sm font-medium">Manage Customers</p>
-            </button>
-            <button className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-600 hover:bg-gray-50 transition-colors">
-              <IconUsers className="h-6 w-6 mx-auto mb-2 text-gray-600" />
-              <p className="text-sm font-medium">View All Users</p>
-            </button>
-          </div>
-        </CardContent>
-      </Card>
+      )}
     </div>
   );
 }

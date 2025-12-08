@@ -28,9 +28,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import navibitesLogo from "@/assets/icon.png";
-import { useAuthStore } from "@/store/authStore";
+import { useAuth } from "@/hooks/useAuth";
 
-// Navigation structure for admin
 const navigationItems = [
   {
     name: "Dashboard",
@@ -168,7 +167,7 @@ export function AdminSidebar({
   const { state } = useSidebar();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
-  const { logout } = useAuthStore();
+  const { logout, user } = useAuth();
 
   const isCollapsed = state === "collapsed";
 
@@ -209,7 +208,18 @@ export function AdminSidebar({
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton className="w-full">
-                  <User2 /> Administrator
+                  {user?.profile_photo_url ? (
+                    <img
+                      src={user.profile_photo_url}
+                      alt={user.name}
+                      className="h-6 w-6 rounded-full object-cover"
+                    />
+                  ) : (
+                    <User2 />
+                  )}
+                  <span className="truncate">
+                    {user?.name || "Administrator"}
+                  </span>
                   <ChevronUp
                     className={`ml-auto transition-transform duration-200 ${
                       isOpen ? "rotate-180" : ""
