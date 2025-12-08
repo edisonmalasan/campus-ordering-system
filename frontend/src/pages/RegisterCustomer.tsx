@@ -89,7 +89,7 @@ export default function RegisterCustomer() {
                   <Input
                     id="name"
                     type="text"
-                    placeholder="John Doe"
+                    placeholder="Your full name"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
@@ -103,7 +103,7 @@ export default function RegisterCustomer() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="m@example.com"
+                    placeholder="example@slu.edu.ph"
                     value={formData.email}
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value })
@@ -173,7 +173,7 @@ export default function RegisterCustomer() {
                   <Input
                     id="student_id"
                     type="text"
-                    placeholder="2024-12345"
+                    placeholder="22XXXXX"
                     value={formData.student_id}
                     onChange={(e) =>
                       setFormData({ ...formData, student_id: e.target.value })
@@ -188,7 +188,7 @@ export default function RegisterCustomer() {
                   <Input
                     id="department"
                     type="text"
-                    placeholder="e.g., SAMCIS, CTHM"
+                    placeholder="e.g., CS, MMA, IT, etc."
                     value={formData.department}
                     onChange={(e) =>
                       setFormData({ ...formData, department: e.target.value })
