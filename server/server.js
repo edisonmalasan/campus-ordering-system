@@ -25,7 +25,11 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 
 app.get("/", (req, res) => res.send("API is running..."));
+
+console.log("Registering auth routes...");
 app.use("/api/auth", authRoutes);
+console.log("Auth routes registered");
+
 app.use("/api/customer", customerRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/admin", adminRoutes);
