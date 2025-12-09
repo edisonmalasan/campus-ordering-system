@@ -156,6 +156,26 @@ export default function ShopProfile() {
                 onClick={() => {
                   setIsEditing(false);
                   setIsChangingPassword(false);
+                  if (authUser) {
+                    setUser({
+                      name: authUser.name || "",
+                      email: authUser.email || "",
+                      contact_number: authUser.contact_number || "",
+                      profile_photo_url:
+                        authUser.profile_photo_url ||
+                        "https://i.pinimg.com/736x/0a/f7/4e/0af74e593c1473623388a4c3d3c55e8.jpg",
+                      shop_name: (authUser as any)?.shop_name || "",
+                      business_permit_code:
+                        (authUser as any)?.business_permit_code || "Not provided",
+                      delivery_fee: (authUser as any)?.delivery_fee || 0,
+                      member_since: formatJoinDate(authUser.createdAt),
+                    });
+                  }
+                  setPasswordData({
+                    currentPassword: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                  });
                 }}
                 className="text-white hover:bg-white/10 hover:text-white"
               >
