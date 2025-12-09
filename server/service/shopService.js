@@ -448,3 +448,45 @@ export const getNotifications = async (userId) => {
 
   return notifications;
 };
+
+export const getDashboardStats = async (userId) => {
+  const totalOrders = await Order.countDocuments({ shop_id: userId });
+
+  const revenueResult = await Order.aggregate([
+    {
+      $match: {
+        shop_id: userId,
+        order_status: { $ne: "cancelled" },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$total_amount" },
+      },
+    },
+  ]);
+
+  const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
+
+  const productCount = await Product.countDocuments({ shop_id: userId });
+
+  const recentOrders = await Order.find({ shop_id: userId })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .populate("customer_id", "name")
+    .select("order_status total_amount createdAt");
+
+  const pendingOrders = await Order.countDocuments({
+    shop_id: userId,
+    order_status: "pending",
+  });
+
+  return {
+    totalOrders,
+    totalRevenue,
+    productCount,
+    pendingOrders,
+    recentOrders,
+  };
+};
