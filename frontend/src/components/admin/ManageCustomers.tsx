@@ -29,14 +29,17 @@ export default function ManageCustomers() {
     fetchCustomers();
   }, []);
 
-  const filteredCustomers = customers.filter(customer =>
-    customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.student_id?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCustomers = customers.filter(
+    (customer) =>
+      customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.student_id?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">Loading...</div>
+    );
   }
 
   return (
@@ -63,7 +66,15 @@ export default function ManageCustomers() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                    <Users className="h-5 w-5 text-white" />
+                    {customer.profile_photo_url ? (
+                      <img
+                        src={customer.profile_photo_url}
+                        alt={customer.name}
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <Users className="h-5 w-5 text-white" />
+                    )}
                   </div>
                   <div>
                     <CardTitle>{customer.name}</CardTitle>
@@ -85,11 +96,15 @@ export default function ManageCustomers() {
                 </div>
                 <div>
                   <p className="text-gray-500">Gender</p>
-                  <p className="font-medium capitalize">{customer.gender || "N/A"}</p>
+                  <p className="font-medium capitalize">
+                    {customer.gender || "N/A"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray-500">Joined</p>
-                  <p className="font-medium">{new Date(customer.createdAt).toLocaleDateString()}</p>
+                  <p className="font-medium">
+                    {new Date(customer.createdAt).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
             </CardContent>
