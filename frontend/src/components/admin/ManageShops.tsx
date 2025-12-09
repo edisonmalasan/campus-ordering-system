@@ -87,8 +87,16 @@ export default function ManageShops() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                    <Store className="h-5 w-5 text-white" />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center overflow-hidden">
+                    {shop.profile_photo_url ? (
+                      <img 
+                        src={shop.profile_photo_url} 
+                        alt={shop.shop_name} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Store className="h-5 w-5 text-white" />
+                    )}
                   </div>
                   <div>
                     <CardTitle>{shop.shop_name}</CardTitle>
