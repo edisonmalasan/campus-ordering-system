@@ -1,6 +1,6 @@
 import { Customer } from "../models/customerModel.js";
 import { Shop } from "../models/shopModel.js";
-import Menu from "../models/menuModel.js";
+import Product from "../models/productModel.js";
 import Cart from "../models/cartModel.js";
 import Order from "../models/orderModel.js";
 import Notification from "../models/notificationModel.js";
@@ -93,19 +93,17 @@ export const getAvailableShops = async () => {
     .sort({ shop_name: 1 });
 
   return shops.map((shop) => ({
-    id: shop._id,
-    name: shop.name,
-    email: shop.email,
-    shop_name: shop.shop_name,
-    logo_url: shop.logo_url,
-    delivery_radius: shop.delivery_radius,
-    delivery_fee: shop.delivery_fee,
-    operating_hours: shop.operating_hours,
-    isTemporarilyClosed: shop.isTemporarilyClosed,
+      id: shop._id,
+      shop_name: shop.shop_name,
+      logo_url: shop.logo_url,
+      delivery_fee: shop.delivery_fee,
+      operating_hours: shop.operating_hours,
+      status: shop.status,
+      isTemporarilyClosed: shop.isTemporarilyClosed,
   }));
 };
 
-export const getShopMenu = async (shopId) => {
+export const getShopProduct = async (shopId) => {
   const shop = await Shop.findById(shopId).select("-password");
   if (!shop) {
     const error = new Error("Shop not found");
@@ -119,18 +117,18 @@ export const getShopMenu = async (shopId) => {
     throw error;
   }
 
-  const menu = await Menu.find({
+  const products = await Product.find({
     shop_id: shopId,
     status: { $in: ["available"] },
   }).sort({ items_category: 1, items_name: 1 });
 
-  return menu;
+  return products;
 };
 
 export const getCart = async (userId) => {
   const cart = await Cart.findOne({ user_id: userId })
     .populate("shop_id", "shop_name logo_url delivery_fee")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 
   if (!cart) {
     return {
@@ -144,11 +142,11 @@ export const getCart = async (userId) => {
 };
 
 export const addToCart = async (userId, cartData) => {
-  const { shop_id, menu_id, quantity } = cartData;
+  const { shop_id, product_id, quantity } = cartData;
 
-  if (!shop_id || !menu_id || !quantity || quantity < 1) {
+  if (!shop_id || !product_id || !quantity || quantity < 1) {
     const error = new Error(
-      "shop_id, menu_id, and quantity (>=1) are required"
+      "shop_id, product_id, and quantity (>=1) are required"
     );
     error.statusCode = 400;
     throw error;
@@ -161,21 +159,21 @@ export const addToCart = async (userId, cartData) => {
     throw error;
   }
 
-  const menuItem = await Menu.findById(menu_id);
-  if (!menuItem) {
-    const error = new Error("Menu item not found");
+  const productItem = await Product.findById(product_id);
+  if (!productItem) {
+    const error = new Error("Product not found");
     error.statusCode = 404;
     throw error;
   }
 
-  if (menuItem.shop_id.toString() !== shop_id) {
-    const error = new Error("Menu item does not belong to this shop");
+  if (productItem.shop_id.toString() !== shop_id) {
+    const error = new Error("Product does not belong to this shop");
     error.statusCode = 400;
     throw error;
   }
 
-  if (menuItem.status !== "available") {
-    const error = new Error("Menu item is not available");
+  if (productItem.status !== "available") {
+    const error = new Error("Product is not available");
     error.statusCode = 400;
     throw error;
   }
@@ -187,7 +185,7 @@ export const addToCart = async (userId, cartData) => {
     cart = null;
   }
 
-  const subtotal = menuItem.items_price * quantity;
+  const subtotal = productItem.items_price * quantity;
 
   if (!cart) {
     cart = await Cart.create({
@@ -195,7 +193,7 @@ export const addToCart = async (userId, cartData) => {
       shop_id: shop_id,
       items: [
         {
-          menu_id: menu_id,
+          product_id: product_id,
           quantity: quantity,
           subtotal: subtotal,
         },
@@ -204,16 +202,16 @@ export const addToCart = async (userId, cartData) => {
     });
   } else {
     const existingItemIndex = cart.items.findIndex(
-      (item) => item.menu_id.toString() === menu_id
+      (item) => item.product_id.toString() === product_id
     );
 
     if (existingItemIndex >= 0) {
       cart.items[existingItemIndex].quantity += quantity;
       cart.items[existingItemIndex].subtotal =
-        menuItem.items_price * cart.items[existingItemIndex].quantity;
+        productItem.items_price * cart.items[existingItemIndex].quantity;
     } else {
       cart.items.push({
-        menu_id: menu_id,
+        product_id: product_id,
         quantity: quantity,
         subtotal: subtotal,
       });
@@ -229,7 +227,7 @@ export const addToCart = async (userId, cartData) => {
 
   return await Cart.findById(cart._id)
     .populate("shop_id", "shop_name logo_url delivery_fee")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 };
 
 export const updateCartItem = async (userId, itemId, quantity) => {
@@ -256,15 +254,15 @@ export const updateCartItem = async (userId, itemId, quantity) => {
     throw error;
   }
 
-  const menuItem = await Menu.findById(cart.items[itemIndex].menu_id);
-  if (!menuItem) {
-    const error = new Error("Menu item not found");
+  const productItem = await Product.findById(cart.items[itemIndex].product_id);
+  if (!productItem) {
+    const error = new Error("Product not found");
     error.statusCode = 404;
     throw error;
   }
 
   cart.items[itemIndex].quantity = quantity;
-  cart.items[itemIndex].subtotal = menuItem.items_price * quantity;
+  cart.items[itemIndex].subtotal = productItem.items_price * quantity;
 
   cart.total_amount = cart.items.reduce((sum, item) => sum + item.subtotal, 0);
 
@@ -272,7 +270,7 @@ export const updateCartItem = async (userId, itemId, quantity) => {
 
   return await Cart.findById(cart._id)
     .populate("shop_id", "shop_name logo_url delivery_fee")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 };
 
 export const removeItemFromCart = async (userId, itemId) => {
@@ -306,7 +304,7 @@ export const removeItemFromCart = async (userId, itemId) => {
 
   return await Cart.findById(cart._id)
     .populate("shop_id", "shop_name logo_url delivery_fee")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 };
 
 export const placeCustomerOrder = async (userId, orderData) => {
@@ -333,7 +331,7 @@ export const placeCustomerOrder = async (userId, orderData) => {
 
   const cart = await Cart.findOne({ user_id: userId })
     .populate("shop_id", "delivery_fee")
-    .populate("items.menu_id", "items_price");
+    .populate("items.product_id", "items_price");
 
   if (!cart || cart.items.length === 0) {
     const error = new Error("Cart is empty");
@@ -342,10 +340,10 @@ export const placeCustomerOrder = async (userId, orderData) => {
   }
 
   for (const cartItem of cart.items) {
-    const menuItem = await Menu.findById(cartItem.menu_id);
-    if (!menuItem || menuItem.status !== "available") {
+    const productItem = await Product.findById(cartItem.product_id);
+    if (!productItem || productItem.status !== "available") {
       const error = new Error(
-        `Menu item ${menuItem?.items_name || "unknown"} is no longer available`
+        `Product ${productItem?.items_name || "unknown"} is no longer available`
       );
       error.statusCode = 400;
       throw error;
@@ -353,9 +351,9 @@ export const placeCustomerOrder = async (userId, orderData) => {
   }
 
   const orderItems = cart.items.map((cartItem) => ({
-    menu_id: cartItem.menu_id._id || cartItem.menu_id,
+    product_id: cartItem.product_id._id || cartItem.product_id,
     quantity: cartItem.quantity,
-    price: cartItem.menu_id.items_price,
+    price: cartItem.product_id.items_price,
     subtotal: cartItem.subtotal,
   }));
 
@@ -388,14 +386,14 @@ export const placeCustomerOrder = async (userId, orderData) => {
 
   return await Order.findById(order._id)
     .populate("shop_id", "shop_name logo_url")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 };
 
 export const getOrderHistory = async (userId) => {
   const orders = await Order.find({ customer_id: userId })
     .sort({ createdAt: -1 })
     .populate("shop_id", "shop_name logo_url")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 
   return orders;
 };
@@ -404,7 +402,7 @@ export const getOrderDetails = async (orderId, userId) => {
   const order = await Order.findById(orderId)
     .populate("shop_id", "shop_name logo_url name email contact_number")
     .populate(
-      "items.menu_id",
+      "items.product_id",
       "items_name items_price photo_url items_description"
     );
 
@@ -501,7 +499,7 @@ export const getCheckout = async (userId) => {
   const cart = await Cart.findOne({ user_id: userId })
     .populate("shop_id", "shop_name logo_url delivery_fee operating_hours")
     .populate(
-      "items.menu_id",
+      "items.product_id",
       "items_name items_price photo_url items_description"
     );
 
@@ -512,12 +510,12 @@ export const getCheckout = async (userId) => {
   }
 
   for (const cartItem of cart.items) {
-    const menuItem = await Menu.findById(
-      cartItem.menu_id._id || cartItem.menu_id
+    const productItem = await Product.findById(
+      cartItem.product_id._id || cartItem.product_id
     );
-    if (!menuItem || menuItem.status !== "available") {
+    if (!productItem || productItem.status !== "available") {
       const error = new Error(
-        `Menu item ${menuItem?.items_name || "unknown"} is no longer available`
+        `Product ${productItem?.items_name || "unknown"} is no longer available`
       );
       error.statusCode = 400;
       throw error;
@@ -541,7 +539,7 @@ export const getOrderSuccess = async (orderId, userId) => {
   const order = await Order.findById(orderId)
     .populate("shop_id", "shop_name logo_url name email contact_number")
     .populate(
-      "items.menu_id",
+      "items.product_id",
       "items_name items_price photo_url items_description"
     );
 

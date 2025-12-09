@@ -1,6 +1,6 @@
 import { Shop } from "../models/shopModel.js";
 import Order from "../models/orderModel.js";
-import Menu from "../models/menuModel.js";
+import Product from "../models/productModel.js";
 import Notification from "../models/notificationModel.js";
 
 export const getProfile = async (userId) => {
@@ -16,7 +16,6 @@ export const getProfile = async (userId) => {
     email: shop.email,
     shop_name: shop.shop_name,
     logo_url: shop.logo_url,
-    delivery_radius: shop.delivery_radius,
     delivery_fee: shop.delivery_fee,
     operating_hours: shop.operating_hours,
     status: shop.status,
@@ -32,7 +31,6 @@ export const updateProfile = async (userId, updateData) => {
     "contact_number",
     "shop_name",
     "logo_url",
-    "delivery_radius",
     "delivery_fee",
     "operating_hours",
     "isTemporarilyClosed",
@@ -62,7 +60,6 @@ export const updateProfile = async (userId, updateData) => {
     email: updatedShop.email,
     shop_name: updatedShop.shop_name,
     logo_url: updatedShop.logo_url,
-    delivery_radius: updatedShop.delivery_radius,
     delivery_fee: updatedShop.delivery_fee,
     operating_hours: updatedShop.operating_hours,
     status: updatedShop.status,
@@ -75,7 +72,7 @@ export const getShopOrders = async (userId) => {
   const orders = await Order.find({ shop_id: userId })
     .sort({ createdAt: -1 })
     .populate("customer_id", "name email contact_number")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 
   return orders;
 };
@@ -83,7 +80,7 @@ export const getShopOrders = async (userId) => {
 export const getOrderById = async (orderId, userId) => {
   const order = await Order.findById(orderId)
     .populate("customer_id", "name email contact_number")
-    .populate("items.menu_id", "items_name items_price photo_url");
+    .populate("items.product_id", "items_name items_price photo_url");
 
   if (!order) {
     const error = new Error("Order not found");
@@ -264,55 +261,58 @@ export const cancelOrder = async (orderId, userId) => {
   return order;
 };
 
-export const getMenu = async (userId) => {
-  const menu = await Menu.find({ shop_id: userId }).sort({ createdAt: -1 });
-  return menu;
+export const getProduct = async (userId) => {
+  const product = await Product.find({ shop_id: userId }).sort({
+    createdAt: -1,
+  });
+  return product;
 };
 
-export const getMenuItemById = async (menuItemId, userId) => {
-  const menuItem = await Menu.findById(menuItemId);
+export const getProductById = async (productId, userId) => {
+  const productItem = await Product.findById(productId);
 
-  if (!menuItem) {
-    const error = new Error("Menu item not found");
+  if (!productItem) {
+    const error = new Error("Product not found");
     error.statusCode = 404;
     throw error;
   }
 
-  if (menuItem.shop_id.toString() !== userId) {
+  if (productItem.shop_id.toString() !== userId) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
   }
 
-  return menuItem;
+  return productItem;
 };
 
-export const addMenuItem = async (userId, menuData) => {
-  const menuItem = await Menu.create({
+export const addProduct = async (userId, productData) => {
+  const productItem = await Product.create({
     shop_id: userId,
-    items_name: menuData.items_name || menuData.name,
-    items_description: menuData.items_description || menuData.description,
-    items_price: menuData.items_price || menuData.price,
-    photo_url: menuData.photo_url || menuData.image_url,
-    preparation_time: menuData.preparation_time || 15,
-    items_category: menuData.items_category || menuData.category || "general",
-    status: menuData.status || "available",
-    stock: menuData.stock || 0,
+    items_name: productData.items_name || productData.name,
+    items_description: productData.items_description || productData.description,
+    items_price: productData.items_price || productData.price,
+    photo_url: productData.photo_url || productData.image_url,
+    preparation_time: productData.preparation_time || 15,
+    items_category:
+      productData.items_category || productData.category || "general",
+    status: productData.status || "available",
+    stock: productData.stock || 0,
   });
 
-  return menuItem;
+  return productItem;
 };
 
-export const updateMenuItem = async (menuItemId, userId, updateData) => {
-  const menuItem = await Menu.findById(menuItemId);
+export const updateProduct = async (productId, userId, updateData) => {
+  const productItem = await Product.findById(productId);
 
-  if (!menuItem) {
-    const error = new Error("Menu item not found");
+  if (!productItem) {
+    const error = new Error("Product not found");
     error.statusCode = 404;
     throw error;
   }
 
-  if (menuItem.shop_id.toString() !== userId) {
+  if (productItem.shop_id.toString() !== userId) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -352,7 +352,7 @@ export const updateMenuItem = async (menuItemId, userId, updateData) => {
     filteredUpdates.items_category = updateData.category;
   }
 
-  const updated = await Menu.findByIdAndUpdate(menuItemId, filteredUpdates, {
+  const updated = await Product.findByIdAndUpdate(productId, filteredUpdates, {
     new: true,
     runValidators: true,
   });
@@ -360,23 +360,23 @@ export const updateMenuItem = async (menuItemId, userId, updateData) => {
   return updated;
 };
 
-export const deleteMenuItem = async (menuItemId, userId) => {
-  const menuItem = await Menu.findById(menuItemId);
+export const deleteProduct = async (productId, userId) => {
+  const productItem = await Product.findById(productId);
 
-  if (!menuItem) {
-    const error = new Error("Menu item not found");
+  if (!productItem) {
+    const error = new Error("Product not found");
     error.statusCode = 404;
     throw error;
   }
 
-  if (menuItem.shop_id.toString() !== userId) {
+  if (productItem.shop_id.toString() !== userId) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
   }
 
-  await Menu.findByIdAndDelete(menuItemId);
-  return { message: "Menu item deleted successfully" };
+  await Product.findByIdAndDelete(productId);
+  return { message: "Product deleted successfully" };
 };
 
 export const getDailySalesReport = async (userId) => {
@@ -447,4 +447,46 @@ export const getNotifications = async (userId) => {
     .populate("order_id", "order_status total_amount");
 
   return notifications;
+};
+
+export const getDashboardStats = async (userId) => {
+  const totalOrders = await Order.countDocuments({ shop_id: userId });
+
+  const revenueResult = await Order.aggregate([
+    {
+      $match: {
+        shop_id: userId,
+        order_status: { $ne: "cancelled" },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$total_amount" },
+      },
+    },
+  ]);
+
+  const totalRevenue = revenueResult.length > 0 ? revenueResult[0].total : 0;
+
+  const productCount = await Product.countDocuments({ shop_id: userId });
+
+  const recentOrders = await Order.find({ shop_id: userId })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .populate("customer_id", "name")
+    .select("order_status total_amount createdAt");
+
+  const pendingOrders = await Order.countDocuments({
+    shop_id: userId,
+    order_status: "pending",
+  });
+
+  return {
+    totalOrders,
+    totalRevenue,
+    productCount,
+    pendingOrders,
+    recentOrders,
+  };
 };

@@ -4,7 +4,7 @@ import {
   updateProfile,
   deactivateAccount,
   getAvailableShops,
-  getShopMenu,
+  getShopProduct,
   getCart,
   addToCart,
   updateCartItem,
@@ -30,7 +30,7 @@ customerRouter.put("/profile", updateProfile);
 customerRouter.put("/deactivate", deactivateAccount);
 
 customerRouter.get("/shops", getAvailableShops);
-customerRouter.get("/shops/:id/menu", getShopMenu);
+customerRouter.get("/shops/:id/product", getShopProduct);
 customerRouter.get("/cart", getCart);
 customerRouter.post("/cart/add", addToCart);
 customerRouter.put("/cart/update/:itemId", updateCartItem);

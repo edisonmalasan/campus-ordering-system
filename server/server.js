@@ -9,7 +9,14 @@ import adminRoutes from "./api/routes/adminRoutes.js";
 
 dotenv.config();
 const app = express();
-app.use(cors());
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 
 mongoose
@@ -18,7 +25,11 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 
 app.get("/", (req, res) => res.send("API is running..."));
+
+console.log("Registering auth routes...");
 app.use("/api/auth", authRoutes);
+console.log("Auth routes registered");
+
 app.use("/api/customer", customerRoutes);
 app.use("/api/shop", shopRoutes);
 app.use("/api/admin", adminRoutes);
