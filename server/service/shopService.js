@@ -88,7 +88,7 @@ export const getOrderById = async (orderId, userId) => {
     throw error;
   }
 
-  if (order.shop_id.toString() !== userId) {
+  if (order.shop_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -106,7 +106,7 @@ export const acceptOrder = async (orderId, userId) => {
     throw error;
   }
 
-  if (order.shop_id.toString() !== userId) {
+  if (order.shop_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -143,7 +143,7 @@ export const rejectOrder = async (orderId, userId) => {
     throw error;
   }
 
-  if (order.shop_id.toString() !== userId) {
+  if (order.shop_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -195,7 +195,7 @@ export const updateOrderStatus = async (orderId, userId, newStatus) => {
     throw error;
   }
 
-  if (order.shop_id.toString() !== userId) {
+  if (order.shop_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -233,7 +233,7 @@ export const cancelOrder = async (orderId, userId) => {
     throw error;
   }
 
-  if (order.shop_id.toString() !== userId) {
+  if (order.shop_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -489,4 +489,43 @@ export const getDashboardStats = async (userId) => {
     pendingOrders,
     recentOrders,
   };
+};
+
+export const updatePaymentStatus = async (orderId, userId, newStatus) => {
+  const allowedStatuses = ["pending", "completed", "failed"];
+
+  if (!allowedStatuses.includes(newStatus)) {
+    const error = new Error(`Invalid payment status: ${newStatus}`);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const order = await Order.findById(orderId);
+
+  if (!order) {
+    const error = new Error("Order not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (order.shop_id.toString() !== userId.toString()) {
+    const error = new Error("Access denied");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  order.payment_status = newStatus;
+  await order.save();
+
+  if (newStatus === "completed") {
+    await Notification.create({
+      user_id: order.customer_id,
+      title: "Payment Verified",
+      message: `Payment for Order #${order._id} has been verified/completed.`,
+      type: "order",
+      order_id: order._id,
+    });
+  }
+
+  return order;
 };
