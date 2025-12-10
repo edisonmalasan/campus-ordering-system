@@ -8,8 +8,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const ADMIN_EMAIL = "edisonadmin@gmail.com";
-const ADMIN_PASSWORD = "edisonmalasan17";
+const ADMIN_EMAIL = "admin@gmail.com";
+const ADMIN_PASSWORD = "edisonmalasan";
 const ADMIN_NAME = "Edison Admin";
 const ADMIN_PHONE = "09123456789";
 
