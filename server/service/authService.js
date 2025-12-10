@@ -269,6 +269,12 @@ export const updateShopSettings = async (userId, settingsData) => {
     user.delivery_fee = settingsData.delivery_fee;
   if (settingsData.logo_url !== undefined)
     user.logo_url = settingsData.logo_url;
+  if (settingsData.gcash_qr_url !== undefined)
+    user.gcash_qr_url = settingsData.gcash_qr_url;
+  if (settingsData.isTemporarilyClosed !== undefined)
+    user.isTemporarilyClosed = settingsData.isTemporarilyClosed;
+  if (settingsData.operating_hours !== undefined)
+    user.operating_hours = settingsData.operating_hours;
 
   await user.save();
 
@@ -287,7 +293,10 @@ export const updateShopSettings = async (userId, settingsData) => {
       shop_name: user.shop_name,
       business_permit_code: user.business_permit_code,
       logo_url: user.logo_url,
+      gcash_qr_url: user.gcash_qr_url,
       delivery_fee: user.delivery_fee,
+      isTemporarilyClosed: user.isTemporarilyClosed,
+      operating_hours: user.operating_hours,
     },
   };
 };
