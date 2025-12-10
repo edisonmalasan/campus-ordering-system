@@ -15,6 +15,7 @@ import {
   getWeeklySalesReport,
   getShopNotifications,
   getDashboardStats,
+  updatePaymentStatus,
 } from "../controller/shopController.js";
 import { validateToken, requireRole } from "../../middleware/authMiddleware.js";
 
@@ -34,6 +35,7 @@ shopRouter.get("/orders", getShopOrders);
 shopRouter.patch("/orders/:id/accept", handleAcceptOrder);
 shopRouter.patch("/orders/:id/reject", handleRejectOrder);
 shopRouter.patch("/orders/:id/status", updateOrderStatus);
+shopRouter.patch("/orders/:id/payment-status", updatePaymentStatus);
 shopRouter.patch("/orders/:id/cancel", handleCancelOrder);
 
 shopRouter.get("/reports/daily", getDailySalesReport);
