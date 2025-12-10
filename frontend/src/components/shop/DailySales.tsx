@@ -4,7 +4,7 @@ import { Loader2, TrendingUp } from "lucide-react";
 import * as shopApi from "@/lib/api/shop";
 
 export default function DailySales() {
-  const [salesData, setSalesData] = useState<shopApi.SalesReport | null>(null);
+  const [salesData, setSalesData] = useState<shopApi.DailySalesReport | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function DailySales() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Daily Sales Report</h2>
-        <p className="text-gray-600">{salesData.date}</p>
+        <p className="text-gray-600">{new Date(salesData.date).toLocaleDateString()}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -54,7 +54,7 @@ export default function DailySales() {
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-green-600">
-              ₱{salesData.totalSales.toFixed(2)}
+              ₱{salesData.total_revenue.toFixed(2)}
             </p>
           </CardContent>
         </Card>
@@ -64,31 +64,10 @@ export default function DailySales() {
             <CardTitle>Total Orders</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold">{salesData.totalOrders}</p>
+            <p className="text-3xl font-bold">{salesData.total_orders}</p>
           </CardContent>
         </Card>
       </div>
-
-      {salesData.topProducts && salesData.topProducts.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Products</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {salesData.topProducts.map((product, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{product.name}</p>
-                    <p className="text-sm text-gray-600">Sold: {product.quantity}</p>
-                  </div>
-                  <p className="font-bold text-green-600">₱{product.revenue.toFixed(2)}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
