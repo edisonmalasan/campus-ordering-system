@@ -42,7 +42,15 @@ export interface User {
   business_permit_code?: string;
   delivery_fee?: number;
   logo_url?: string;
+  gcash_qr_url?: string;
   status?: string;
+  isTemporarilyClosed?: boolean;
+  operating_hours?: {
+    day: string;
+    open: string;
+    close: string;
+    isClosed: boolean;
+  }[];
 }
 
 export interface AuthResponse {
@@ -127,6 +135,14 @@ export const updateShopSettings = async (data: {
   shop_name?: string;
   delivery_fee?: number;
   logo_url?: string;
+  gcash_qr_url?: string;
+  isTemporarilyClosed?: boolean;
+  operating_hours?: {
+    day: string;
+    open: string;
+    close: string;
+    isClosed: boolean;
+  }[];
 }): Promise<{
   success: boolean;
   message: string;
