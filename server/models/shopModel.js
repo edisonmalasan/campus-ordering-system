@@ -26,6 +26,7 @@ const shopSchema = new mongoose.Schema({
   delivery_fee: { type: Number, required: true },
   business_permit_code: { type: String },
   operating_hours: [hoursSchema],
+  gcash_qr_url: { type: String },
   isTemporarilyClosed: { type: Boolean, default: false },
   status: {
     type: String,
@@ -35,4 +36,4 @@ const shopSchema = new mongoose.Schema({
 });
 
 export const Shop =
-  mongoose.models.Shop || User.discriminator("shop", shopSchema);
+  mongoose.models.shop || User.discriminator("shop", shopSchema);
