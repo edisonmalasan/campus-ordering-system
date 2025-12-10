@@ -1,16 +1,36 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Minus, Plus, ShoppingBag, Trash2, Loader2 } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  ShoppingBag,
+  Store,
+  ChevronRight,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import * as customerApi from "@/lib/api/customer";
 import { toast } from "sonner";
 
+interface CartItemWithSelection extends customerApi.CartItem {
+  selected: boolean;
+  shopName: string;
+  shopId: string;
+}
+
 export default function CartPage() {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState<customerApi.CartItem[]>([]);
+  const [cartItems, setCartItems] = useState<CartItemWithSelection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [shopDetails, setShopDetails] = useState<{
+    id: string;
+    name: string;
+    deliveryFee: number;
+    logo?: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchCart();
@@ -20,9 +40,28 @@ export default function CartPage() {
     try {
       setIsLoading(true);
       const response = await customerApi.getCart();
-      // DONT REMOVE COMMENT: { success: true, data: { items: [], shop_id, total_amount } }
-      const cartData = response.data?.data || response.data;
-      setCartItems(cartData?.items || []);
+      const data = response.data?.data || response.data;
+
+      if (data && data.items) {
+        const shop = data.shop_id;
+        const mappedItems = data.items.map((item: any) => ({
+          ...item,
+          selected: false, // Default unselected
+          shopName: shop?.shop_name || "Unknown Shop",
+          shopId: shop?._id,
+        }));
+
+        setCartItems(mappedItems);
+        setShopDetails({
+          id: shop?._id,
+          name: shop?.shop_name,
+          deliveryFee: shop?.delivery_fee || 0,
+          logo: shop?.logo_url,
+        });
+      } else {
+        setCartItems([]);
+        setShopDetails(null);
+      }
     } catch (error) {
       console.error("Error fetching cart:", error);
       toast.error("Failed to load cart");
@@ -32,45 +71,114 @@ export default function CartPage() {
     }
   };
 
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, CartItemWithSelection[]> = {};
+    cartItems.forEach((item) => {
+      if (!groups[item.shopName]) {
+        groups[item.shopName] = [];
+      }
+      groups[item.shopName].push(item);
+    });
+    return groups;
+  }, [cartItems]);
+
   const updateQuantity = async (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
+
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item._id === itemId ? { ...item, quantity: newQuantity } : item
+      )
+    );
+
     try {
       await customerApi.updateCartItem(itemId, newQuantity);
-      setCartItems((prev) =>
-        prev.map((item) =>
-          item._id === itemId ? { ...item, quantity: newQuantity } : item
-        )
-      );
-      toast.success("Cart updated");
     } catch (error) {
       console.error("Error updating cart:", error);
-      toast.error("Failed to update cart");
+      toast.error("Failed to update quantity");
+      fetchCart();
     }
   };
 
   const removeItem = async (itemId: string) => {
+    setCartItems((prev) => prev.filter((item) => item._id !== itemId));
+
     try {
       await customerApi.removeFromCart(itemId);
-      setCartItems((prev) => prev.filter((item) => item._id !== itemId));
       toast.success("Item removed");
+      if (cartItems.length <= 1) fetchCart();
     } catch (error) {
       console.error("Error removing item:", error);
       toast.error("Failed to remove item");
+      fetchCart();
     }
   };
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+  const toggleItemSelection = (id: string, shopName: string) => {
+    setCartItems((prev) => {
+      const isDifferentShopSelected = prev.some(
+        (item) => item.selected && item.shopName !== shopName
+      );
+
+      return prev.map((item) => {
+        if (isDifferentShopSelected && item.shopName !== shopName) {
+          return { ...item, selected: false };
+        }
+        if (item._id === id) {
+          return { ...item, selected: !item.selected };
+        }
+        return item;
+      });
+    });
+  };
+
+  const toggleShopSelection = (
+    shopName: string,
+    isCurrentlySelected: boolean
+  ) => {
+    setCartItems((prev) =>
+      prev.map((item) => {
+        if (item.shopName !== shopName && !isCurrentlySelected) {
+          return { ...item, selected: false };
+        }
+
+        if (item.shopName === shopName) {
+          return { ...item, selected: !isCurrentlySelected };
+        }
+        return item;
+      })
+    );
+  };
+
+  const selectedItems = cartItems.filter((item) => item.selected);
+  const selectedSubtotal = selectedItems.reduce(
+    (sum, item) =>
+      sum +
+      ((item.product_id as any).items_price || item.product_id.price || 0) *
+        item.quantity,
     0
   );
-  const deliveryFee = cartItems.length > 0 ? 50 : 0;
-  const total = subtotal + deliveryFee;
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  const deliveryFee =
+    selectedItems.length > 0 ? shopDetails?.deliveryFee || 0 : 0;
+  const total = selectedSubtotal + deliveryFee;
+  const selectedCount = selectedItems.reduce(
+    (sum, item) => sum + item.quantity,
+    0
+  );
+
+  const handleCheckout = () => {
+    if (selectedCount === 0) return;
+    const selectedItemIds = selectedItems.map((item) => item._id);
+    navigate("/customer/cart/checkout", {
+      state: { selectedItems: selectedItemIds },
+    });
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-green-600" />
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
       </div>
     );
   }
@@ -82,6 +190,7 @@ export default function CartPage() {
           !isMobile && "grid grid-cols-1 md:grid-cols-3 gap-8"
         }`}
       >
+        {/* LEFT */}
         <div className={`space-y-4 ${!isMobile && "md:col-span-2"}`}>
           <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center">
             <h1 className="font-bold text-gray-900 text-lg">
@@ -92,7 +201,7 @@ export default function CartPage() {
               className="text-gray-500 hover:text-green-600 text-xs h-auto p-0"
               onClick={() => navigate("/customer/store")}
             >
-              Continue Shopping
+              Add more items
             </Button>
           </div>
 
@@ -104,78 +213,139 @@ export default function CartPage() {
               </h3>
               <Link to="/customer/store">
                 <Button className="mt-4 bg-green-600 hover:bg-green-700">
-                  Browse Shops
+                  Browse Foods
                 </Button>
               </Link>
             </div>
           ) : (
-            <div className="space-y-4">
-              {cartItems.map((item) => (
+            Object.entries(groupedItems).map(([shopName, items]) => {
+              const isShopFullySelected = items.every((i) => i.selected);
+
+              return (
                 <div
-                  key={item._id}
-                  className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex gap-4 items-start hover:shadow-md transition-shadow"
+                  key={shopName}
+                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
                 >
-                  <div className="h-24 w-24 bg-gray-50 rounded-lg overflow-hidden shrink-0 border border-gray-100">
-                    {item.product_id.image_url ? (
-                      <img
-                        src={item.product_id.image_url}
-                        alt={item.product_id.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center bg-gray-100">
-                        <ShoppingBag className="h-8 w-8 text-gray-400" />
-                      </div>
-                    )}
+                  <div className="p-4 border-b border-gray-50 flex items-center gap-3 bg-white">
+                    <input
+                      type="checkbox"
+                      className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                      checked={isShopFullySelected}
+                      onChange={() =>
+                        toggleShopSelection(shopName, isShopFullySelected)
+                      }
+                    />
+                    <div
+                      className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => navigate(`/customer/store`)}
+                    >
+                      <Store className="h-4 w-4 text-gray-700" />
+                      <span className="font-bold text-gray-900 text-sm">
+                        {shopName}
+                      </span>
+                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                    </div>
                   </div>
 
-                  <div className="flex-1 min-w-0 flex flex-col justify-between h-24">
-                    <div>
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-medium text-gray-900 line-clamp-2 text-sm md:text-base leading-tight">
-                          {item.product_id.name}
-                        </h3>
-                        <button
-                          className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                          onClick={() => removeItem(item._id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
+                  <div className="divide-y divide-gray-50">
+                    {items.map((item) => (
+                      <div
+                        key={item._id}
+                        className="p-4 flex gap-4 items-start hover:bg-gray-50/50 transition-colors"
+                      >
+                        <div className="pt-8">
+                          <input
+                            type="checkbox"
+                            className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
+                            checked={item.selected || false}
+                            onChange={() =>
+                              toggleItemSelection(item._id, item.shopName)
+                            }
+                          />
+                        </div>
 
-                    <div className="flex justify-between items-end">
-                      <p className="font-bold text-green-600">
-                        ₱{item.product_id.price.toFixed(2)}
-                      </p>
+                        <div className="h-24 w-24 bg-gray-50 rounded-lg overflow-hidden shrink-0 border border-gray-100">
+                          {(item.product_id as any).photo_url ||
+                          item.product_id.image_url ? (
+                            <img
+                              src={
+                                (item.product_id as any).photo_url ||
+                                item.product_id.image_url
+                              }
+                              alt={
+                                (item.product_id as any).items_name ||
+                                item.product_id.name
+                              }
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-full w-full flex items-center justify-center bg-gray-100">
+                              <ShoppingBag className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
 
-                      <div className="flex items-center bg-white border border-gray-200 rounded-lg h-8 shadow-sm">
-                        <button
-                          className="px-2.5 h-full text-gray-500 hover:bg-gray-50 rounded-l-lg hover:text-gray-900 disabled:opacity-50"
-                          onClick={() =>
-                            updateQuantity(item._id, item.quantity - 1)
-                          }
-                          disabled={item.quantity <= 1}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </button>
-                        <span className="w-8 text-center text-xs font-bold text-gray-900">
-                          {item.quantity}
-                        </span>
-                        <button
-                          className="px-2.5 h-full text-gray-500 hover:bg-gray-50 rounded-r-lg hover:text-gray-900"
-                          onClick={() =>
-                            updateQuantity(item._id, item.quantity + 1)
-                          }
-                        >
-                          <Plus className="h-3 w-3" />
-                        </button>
+                        <div className="flex-1 min-w-0 flex flex-col justify-between h-24">
+                          <div>
+                            <div className="flex justify-between items-start">
+                              <h3 className="font-medium text-gray-900 line-clamp-2 text-sm md:text-base leading-tight">
+                                {(item.product_id as any).items_name ||
+                                  item.product_id.name}
+                              </h3>
+                              <button
+                                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                                onClick={() => removeItem(item._id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+                              {/* Category usually not in cart item, but strictly following structure */}
+                              {(item.product_id as any).items_category ||
+                                "Food"}
+                            </p>
+                          </div>
+
+                          <div className="flex justify-between items-end">
+                            <p className="font-bold text-green-600">
+                              ₱{" "}
+                              {(
+                                (item.product_id as any).items_price ||
+                                item.product_id.price ||
+                                0
+                              ).toFixed(0)}
+                            </p>
+
+                            <div className="flex items-center bg-white border border-gray-200 rounded-lg h-8 shadow-sm">
+                              <button
+                                className="px-2.5 h-full text-gray-500 hover:bg-gray-50 rounded-l-lg hover:text-gray-900 disabled:opacity-50"
+                                onClick={() =>
+                                  updateQuantity(item._id, item.quantity - 1)
+                                }
+                                disabled={item.quantity <= 1}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <span className="w-8 text-center text-xs font-bold text-gray-900">
+                                {item.quantity}
+                              </span>
+                              <button
+                                className="px-2.5 h-full text-gray-500 hover:bg-gray-50 rounded-r-lg hover:text-gray-900"
+                                onClick={() =>
+                                  updateQuantity(item._id, item.quantity + 1)
+                                }
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })
           )}
         </div>
 
@@ -197,61 +367,65 @@ export default function CartPage() {
               }`}
             >
               {!isMobile && (
-                <>
-                  <h2 className="font-bold text-lg mb-6 text-gray-900">
-                    Order Summary
-                  </h2>
+                <h2 className="font-bold text-lg mb-6 text-gray-900">
+                  Order Summary
+                </h2>
+              )}
 
-                  <div className="space-y-6">
-                    <div className="space-y-3 pb-6 border-b border-gray-100">
-                      <div className="flex justify-between items-center text-gray-600">
-                        <span>Subtotal ({itemCount} items)</span>
-                        <span className="font-medium text-gray-900">
-                          ₱{subtotal.toFixed(2)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center text-gray-600">
-                        <span>Delivery Fee</span>
-                        <span className="font-medium text-gray-900">
-                          ₱{deliveryFee.toFixed(2)}
-                        </span>
-                      </div>
+              {!isMobile && (
+                <div className="space-y-6">
+                  <div className="space-y-3 pb-6 border-b border-gray-100">
+                    <div className="flex justify-between items-center text-gray-600">
+                      <span>Subtotal ({selectedCount} items)</span>
+                      <span className="font-medium text-gray-900">
+                        ₱ {selectedSubtotal.toFixed(2)}
+                      </span>
                     </div>
-
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-gray-900 text-lg">
-                          Total Payment
-                        </span>
-                        <span className="font-bold text-2xl text-green-600">
-                          ₱{total.toFixed(2)}
-                        </span>
-                      </div>
-
-                      <Button
-                        className="w-full h-14 text-lg rounded-xl bg-green-600 hover:bg-green-700 font-bold shadow-lg shadow-green-200"
-                        onClick={() => navigate("/customer/cart/checkout")}
-                        disabled={itemCount === 0}
-                      >
-                        Check Out ({itemCount})
-                      </Button>
+                    <div className="flex justify-between items-center text-gray-600">
+                      <span>Delivery Fee</span>
+                      <span className="font-medium text-gray-900">
+                        ₱ {deliveryFee.toFixed(2)}
+                      </span>
                     </div>
                   </div>
-                </>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="font-bold text-gray-900 text-lg">
+                        Total Payment
+                      </span>
+                      <span className="font-bold text-2xl text-green-600">
+                        ₱ {total.toFixed(0)}
+                      </span>
+                    </div>
+
+                    <Button
+                      className="w-full h-14 text-lg rounded-xl bg-green-600 hover:bg-green-700 font-bold shadow-lg shadow-green-200 transition-all hover:translate-y-[-1px]"
+                      onClick={handleCheckout}
+                      disabled={selectedCount === 0}
+                    >
+                      Check Out ({selectedCount})
+                    </Button>
+                  </div>
+                </div>
               )}
 
               {isMobile && (
                 <div className="flex items-center justify-between gap-4">
-                  <span className="font-bold text-green-600 text-lg">
-                    ₱{total.toFixed(2)}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {/* All checkbox removed for mobile per request */}
+
+                    <span className="font-bold text-green-600 text-lg">
+                      ₱ {total.toFixed(0)}
+                    </span>
+                  </div>
 
                   <Button
                     className="w-40 h-12 text-base rounded-xl bg-green-600 hover:bg-green-700 font-bold shadow-lg shadow-green-200"
-                    onClick={() => navigate("/customer/cart/checkout")}
-                    disabled={itemCount === 0}
+                    onClick={handleCheckout}
+                    disabled={selectedCount === 0}
                   >
-                    Check Out ({itemCount})
+                    Check Out ({selectedCount})
                   </Button>
                 </div>
               )}
