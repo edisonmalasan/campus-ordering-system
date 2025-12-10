@@ -197,3 +197,25 @@ export const getDashboardStats = async (req, res) => {
       .json({ success: false, error: error.message });
   }
 };
+
+export const updatePaymentStatus = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        success: false,
+        error: "Status is required",
+      });
+    }
+
+    const order = await shopService.updatePaymentStatus(id, userId, status);
+    res.status(200).json({ success: true, data: order });
+  } catch (error) {
+    res
+      .status(error.statusCode || 500)
+      .json({ success: false, error: error.message });
+  }
+};
