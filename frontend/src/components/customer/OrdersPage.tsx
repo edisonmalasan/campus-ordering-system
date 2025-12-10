@@ -39,33 +39,25 @@ export default function OrdersPage() {
       }
     };
     fetchOrders();
-  }, []);
+  }, [activeTab]);
 
   const getStatusCategory = (status: string): OrderStatus => {
-    if (status === "completed" || status === "claimed") return "completed";
-    if (status === "cancelled" || status === "rejected") return "cancelled";
+    const s = status?.toLowerCase().trim() || "";
+    if (s === "completed" || s === "claimed" || s === "delivered") return "completed";
+    if (s === "cancelled" || s === "rejected" || s === "declined" || s === "failed") return "cancelled";
     return "ongoing";
   };
 
   const filteredOrders = orders.filter(
     (order) =>
-      getStatusCategory(order.status) === activeTab &&
+      getStatusCategory(order.order_status) === activeTab &&
       (order.shop_id.shop_name
         .toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-        order.order_number.toLowerCase().includes(searchQuery.toLowerCase()))
+        order._id.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const getStatusIcon = (status: OrderStatus) => {
-    switch (status) {
-      case "ongoing":
-        return <Clock className="h-5 w-5" />;
-      case "completed":
-        return <CheckCircle className="h-5 w-5" />;
-      case "cancelled":
-        return <XCircle className="h-5 w-5" />;
-    }
-  };
+
 
   const getStatusColor = (status: OrderStatus) => {
     switch (status) {
@@ -137,14 +129,14 @@ export default function OrdersPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-lg text-gray-900">
-                          Order #{order.order_number}
+                          Order #{order._id.slice(-6).toUpperCase()}
                         </h3>
                         <Badge
                           className={`bg-gradient-to-r ${getStatusColor(
-                            getStatusCategory(order.status)
+                            getStatusCategory(order.order_status)
                           )} text-white border-0`}
                         >
-                          {order.status}
+                          {order.order_status ? order.order_status.replace(/_/g, " ").toUpperCase() : "PENDING"}
                         </Badge>
                       </div>
                       <p className="text-sm text-gray-600 flex items-center gap-1">
@@ -163,13 +155,30 @@ export default function OrdersPage() {
                     <span>{order.items.length} item(s)</span>
                   </div>
 
-                  <div className="pt-2 border-t border-gray-100">
+                  <div className="pt-2 border-t border-gray-100 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        Payment Status
+                      </span>
+                      <span className={`text-sm font-semibold capitalize ${
+                        (order.order_status === "cancelled" || order.order_status === "rejected" || order.order_status === "failed") 
+                          ? "text-red-600" 
+                          : order.payment_status === "paid" 
+                            ? "text-green-600" 
+                            : "text-amber-600"
+                      }`}>
+                        {(order.order_status === "cancelled" || order.order_status === "rejected" || order.order_status === "failed") 
+                          ? "Failed" 
+                          : order.payment_status}
+                      </span>
+                    </div>
+
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">
                         Total Amount
                       </span>
                       <span className="text-xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
-                        ₱{order.total_price.toFixed(2)}
+                        ₱{order.total_amount.toFixed(2)}
                       </span>
                     </div>
                   </div>
