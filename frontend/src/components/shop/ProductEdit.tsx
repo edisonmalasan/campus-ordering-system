@@ -16,12 +16,14 @@ export default function ProductEdit() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    price: "",
-    description: "",
-    image_url: "",
-    availability: true,
+    items_name: "",
+    items_category: "",
+    items_price: "",
+    items_description: "",
+    photo_url: "",
+    status: true,
+    stock: "0",
+    preparation_time: "15",
   });
 
   useEffect(() => {
@@ -32,12 +34,14 @@ export default function ProductEdit() {
         const product = response.data.find((p: any) => p._id === id);
         if (product) {
           setFormData({
-            name: product.name,
-            category: product.category,
-            price: product.price.toString(),
-            description: product.description,
-            image_url: product.image_url || "",
-            availability: product.availability,
+            items_name: product.items_name,
+            items_category: product.items_category,
+            items_price: product.items_price.toString(),
+            items_description: product.items_description,
+            photo_url: product.photo_url || "",
+            status: product.status === "available",
+            stock: (product.stock || 0).toString(),
+            preparation_time: (product.preparation_time || 15).toString(),
           });
         }
       } catch (error) {
@@ -48,7 +52,7 @@ export default function ProductEdit() {
       }
     };
     if (id) fetchProduct();
-  }, [id, toast]);
+  }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,12 +61,14 @@ export default function ProductEdit() {
     try {
       setIsSubmitting(true);
       await shopApi.updateProduct(id, {
-        name: formData.name,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        category: formData.category,
-        image_url: formData.image_url || undefined,
-        availability: formData.availability,
+        items_name: formData.items_name,
+        items_description: formData.items_description,
+        items_price: parseFloat(formData.items_price),
+        items_category: formData.items_category,
+        photo_url: formData.photo_url || undefined,
+        status: formData.status ? "available" : "unavailable",
+        stock: parseInt(formData.stock),
+        preparation_time: parseInt(formData.preparation_time),
       });
       toast.success("Product updated successfully");
       navigate("/shop/products");
@@ -99,50 +105,70 @@ export default function ProductEdit() {
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Basic Information</h3>
               <div className="space-y-2">
-                <Label htmlFor="name">Product Name *</Label>
+                <Label htmlFor="items_name">Product Name *</Label>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  id="items_name"
+                  value={formData.items_name}
+                  onChange={(e) => setFormData({ ...formData, items_name: e.target.value })}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="category">Category *</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+                <Label htmlFor="items_category">Category *</Label>
+                <Select value={formData.items_category} onValueChange={(value) => setFormData({ ...formData, items_category: value })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Main Course">Main Course</SelectItem>
-                    <SelectItem value="Appetizer">Appetizer</SelectItem>
-                    <SelectItem value="Dessert">Dessert</SelectItem>
-                    <SelectItem value="Beverage">Beverage</SelectItem>
-                    <SelectItem value="Noodles">Noodles</SelectItem>
-                    <SelectItem value="Snacks">Snacks</SelectItem>
+                    <SelectItem value="Snack">Snack</SelectItem>
+                    <SelectItem value="Drink">Drink</SelectItem>
+                    <SelectItem value="Rice Meals">Rice Meals</SelectItem>
+                    <SelectItem value="Desserts">Desserts</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
+                <Label htmlFor="items_description">Description *</Label>
                 <Textarea
-                  id="description"
+                  id="items_description"
                   rows={4}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  value={formData.items_description}
+                  onChange={(e) => setFormData({ ...formData, items_description: e.target.value })}
                   required
                 />
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Pricing</h3>
+              <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Details & Pricing</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="items_price">Price (₱) *</Label>
+                  <Input
+                    id="items_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.items_price}
+                    onChange={(e) => setFormData({ ...formData, items_price: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="stock">Stock *</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    value={formData.stock}
+                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
               <div className="space-y-2">
-                <Label htmlFor="price">Price (₱) *</Label>
+                <Label htmlFor="preparation_time">Preparation Time (mins) *</Label>
                 <Input
-                  id="price"
+                  id="preparation_time"
                   type="number"
-                  step="0.01"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  value={formData.preparation_time}
+                  onChange={(e) => setFormData({ ...formData, preparation_time: e.target.value })}
                   required
                 />
               </div>
@@ -151,12 +177,12 @@ export default function ProductEdit() {
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Product Image</h3>
               <div className="space-y-2">
-                <Label htmlFor="image_url">Photo URL</Label>
+                <Label htmlFor="photo_url">Photo URL</Label>
                 <Input
-                  id="image_url"
+                  id="photo_url"
                   type="url"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  value={formData.photo_url}
+                  onChange={(e) => setFormData({ ...formData, photo_url: e.target.value })}
                 />
               </div>
             </div>
@@ -164,10 +190,10 @@ export default function ProductEdit() {
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-700 border-b pb-2">Availability</h3>
               <div className="space-y-2">
-                <Label htmlFor="availability">Status *</Label>
+                <Label htmlFor="status">Status *</Label>
                 <Select
-                  value={formData.availability ? "true" : "false"}
-                  onValueChange={(value) => setFormData({ ...formData, availability: value === "true" })}
+                  value={formData.status ? "true" : "false"}
+                  onValueChange={(value) => setFormData({ ...formData, status: value === "true" })}
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
