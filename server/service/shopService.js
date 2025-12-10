@@ -277,7 +277,7 @@ export const getProductById = async (productId, userId) => {
     throw error;
   }
 
-  if (productItem.shop_id.toString() !== userId) {
+  if (productItem.shop_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -312,7 +312,7 @@ export const updateProduct = async (productId, userId, updateData) => {
     throw error;
   }
 
-  if (productItem.shop_id.toString() !== userId) {
+  if (productItem.shop_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -369,7 +369,7 @@ export const deleteProduct = async (productId, userId) => {
     throw error;
   }
 
-  if (productItem.shop_id.toString() !== userId) {
+  if (productItem.shop_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;

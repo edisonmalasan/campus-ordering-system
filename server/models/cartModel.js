@@ -6,6 +6,11 @@ const cartItemsSchema = new mongoose.Schema({
     ref: "Product",
     required: true,
   },
+  shop_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "shop",
+    required: true,
+  },
   quantity: {
     type: Number,
     required: true,
@@ -21,11 +26,6 @@ const cartSchema = new mongoose.Schema({
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true,
-  },
-  shop_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "shop",
     required: true,
   },
   items: [cartItemsSchema],

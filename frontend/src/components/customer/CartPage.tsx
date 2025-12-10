@@ -18,6 +18,7 @@ interface CartItemWithSelection extends customerApi.CartItem {
   selected: boolean;
   shopName: string;
   shopId: string;
+  deliveryFee: number;
 }
 
 export default function CartPage() {
@@ -25,12 +26,6 @@ export default function CartPage() {
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState<CartItemWithSelection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [shopDetails, setShopDetails] = useState<{
-    id: string;
-    name: string;
-    deliveryFee: number;
-    logo?: string;
-  } | null>(null);
 
   useEffect(() => {
     fetchCart();
@@ -43,24 +38,19 @@ export default function CartPage() {
       const data = response.data?.data || response.data;
 
       if (data && data.items) {
-        const shop = data.shop_id;
+        // Backend now returns items with populated shop_id
         const mappedItems = data.items.map((item: any) => ({
           ...item,
-          selected: false, // Default unselected
-          shopName: shop?.shop_name || "Unknown Shop",
-          shopId: shop?._id,
+          selected: false,
+          shopName: item.shop_id?.shop_name || "Unknown Shop",
+          shopId: item.shop_id?._id,
+          // We need delivery fee per shop for calculation
+          deliveryFee: item.shop_id?.delivery_fee || 0,
         }));
 
         setCartItems(mappedItems);
-        setShopDetails({
-          id: shop?._id,
-          name: shop?.shop_name,
-          deliveryFee: shop?.delivery_fee || 0,
-          logo: shop?.logo_url,
-        });
       } else {
         setCartItems([]);
-        setShopDetails(null);
       }
     } catch (error) {
       console.error("Error fetching cart:", error);
@@ -74,10 +64,12 @@ export default function CartPage() {
   const groupedItems = useMemo(() => {
     const groups: Record<string, CartItemWithSelection[]> = {};
     cartItems.forEach((item) => {
-      if (!groups[item.shopName]) {
-        groups[item.shopName] = [];
+      // Use shopId as key for robustness, but display Name
+      const key = item.shopId;
+      if (!groups[key]) {
+        groups[key] = [];
       }
-      groups[item.shopName].push(item);
+      groups[key].push(item);
     });
     return groups;
   }, [cartItems]);
@@ -106,7 +98,7 @@ export default function CartPage() {
     try {
       await customerApi.removeFromCart(itemId);
       toast.success("Item removed");
-      if (cartItems.length <= 1) fetchCart();
+      // if (cartItems.length <= 1) fetchCart(); // No need to refetch aggressively
     } catch (error) {
       console.error("Error removing item:", error);
       toast.error("Failed to remove item");
@@ -114,40 +106,53 @@ export default function CartPage() {
     }
   };
 
-  const toggleItemSelection = (id: string, shopName: string) => {
+  const toggleItemSelection = (id: string, shopId: string) => {
     setCartItems((prev) => {
-      const isDifferentShopSelected = prev.some(
-        (item) => item.selected && item.shopName !== shopName
-      );
+      // Check if we are selecting an item
+      const itemToToggle = prev.find((i) => i._id === id);
+      const willBeSelected = !itemToToggle?.selected;
 
-      return prev.map((item) => {
-        if (isDifferentShopSelected && item.shopName !== shopName) {
-          return { ...item, selected: false };
-        }
-        if (item._id === id) {
-          return { ...item, selected: !item.selected };
-        }
-        return item;
-      });
+      if (willBeSelected) {
+        // If selecting, deselect all items from OTHER shops
+        return prev.map((item) => {
+          if (item.shopId !== shopId) {
+            return { ...item, selected: false };
+          }
+          if (item._id === id) {
+            return { ...item, selected: true };
+          }
+          return item;
+        });
+      } else {
+        // If deselecting, just deselect
+        return prev.map((item) =>
+          item._id === id ? { ...item, selected: false } : item
+        );
+      }
     });
   };
 
   const toggleShopSelection = (
-    shopName: string,
+    shopId: string,
     isCurrentlySelected: boolean
   ) => {
-    setCartItems((prev) =>
-      prev.map((item) => {
-        if (item.shopName !== shopName && !isCurrentlySelected) {
-          return { ...item, selected: false };
-        }
-
-        if (item.shopName === shopName) {
-          return { ...item, selected: !isCurrentlySelected };
-        }
-        return item;
-      })
-    );
+    setCartItems((prev) => {
+      if (!isCurrentlySelected) {
+        // Selecting this shop -> Deselect everything else
+        return prev.map((item) => ({
+          ...item,
+          selected: item.shopId === shopId,
+        }));
+      } else {
+        // Deselecting this shop -> Deselect its items
+        return prev.map((item) => {
+          if (item.shopId === shopId) {
+            return { ...item, selected: false };
+          }
+          return item;
+        });
+      }
+    });
   };
 
   const selectedItems = cartItems.filter((item) => item.selected);
@@ -159,8 +164,13 @@ export default function CartPage() {
     0
   );
 
-  const deliveryFee =
-    selectedItems.length > 0 ? shopDetails?.deliveryFee || 0 : 0;
+  // Delivery fee is based on the selected shop (assuming only one shop selected)
+  const selectedShopId =
+    selectedItems.length > 0 ? selectedItems[0].shopId : null;
+  const deliveryFee = selectedShopId
+    ? cartItems.find((i) => i.shopId === selectedShopId)?.deliveryFee || 0
+    : 0;
+
   const total = selectedSubtotal + deliveryFee;
   const selectedCount = selectedItems.reduce(
     (sum, item) => sum + item.quantity,
@@ -218,12 +228,14 @@ export default function CartPage() {
               </Link>
             </div>
           ) : (
-            Object.entries(groupedItems).map(([shopName, items]) => {
+            // groupedItems keys are shopIds now
+            Object.entries(groupedItems).map(([shopId, items]) => {
               const isShopFullySelected = items.every((i) => i.selected);
+              const shopName = items[0].shopName; // Get name from items
 
               return (
                 <div
-                  key={shopName}
+                  key={shopId}
                   className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
                 >
                   <div className="p-4 border-b border-gray-50 flex items-center gap-3 bg-white">
@@ -232,12 +244,12 @@ export default function CartPage() {
                       className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
                       checked={isShopFullySelected}
                       onChange={() =>
-                        toggleShopSelection(shopName, isShopFullySelected)
+                        toggleShopSelection(shopId, isShopFullySelected)
                       }
                     />
                     <div
                       className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
-                      onClick={() => navigate(`/customer/store`)}
+                      onClick={() => navigate(`/customer/store/${shopId}`)}
                     >
                       <Store className="h-4 w-4 text-gray-700" />
                       <span className="font-bold text-gray-900 text-sm">
@@ -259,7 +271,7 @@ export default function CartPage() {
                             className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 cursor-pointer"
                             checked={item.selected || false}
                             onChange={() =>
-                              toggleItemSelection(item._id, item.shopName)
+                              toggleItemSelection(item._id, item.shopId)
                             }
                           />
                         </div>

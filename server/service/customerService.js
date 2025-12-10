@@ -113,8 +113,6 @@ export const getShopById = async (shopId) => {
     throw error;
   }
 
-  // Optional: Check if shop is verified, though viewing unverified shops might be allowed in some contexts (e.g. preview)
-  // For now, let's enforce verified
   if (shop.status !== "verified") {
     const error = new Error("Shop is not verified");
     error.statusCode = 403;
@@ -180,7 +178,7 @@ export const getShopProduct = async (shopId) => {
 
 export const getCart = async (userId) => {
   const cart = await Cart.findOne({ user_id: userId })
-    .populate("shop_id", "shop_name logo_url delivery_fee")
+    .populate("items.shop_id", "shop_name logo_url delivery_fee gcash_qr_url")
     .populate("items.product_id", "items_name items_price photo_url");
 
   if (!cart) {
@@ -233,20 +231,15 @@ export const addToCart = async (userId, cartData) => {
 
   let cart = await Cart.findOne({ user_id: userId });
 
-  if (cart && cart.shop_id.toString() !== shop_id) {
-    await Cart.findByIdAndDelete(cart._id);
-    cart = null;
-  }
-
   const subtotal = productItem.items_price * quantity;
 
   if (!cart) {
     cart = await Cart.create({
       user_id: userId,
-      shop_id: shop_id,
       items: [
         {
           product_id: product_id,
+          shop_id: shop_id,
           quantity: quantity,
           subtotal: subtotal,
         },
@@ -254,17 +247,19 @@ export const addToCart = async (userId, cartData) => {
       total_amount: subtotal,
     });
   } else {
-    const existingItemIndex = cart.items.findIndex(
+    const itemIndex = cart.items.findIndex(
       (item) => item.product_id.toString() === product_id
     );
 
-    if (existingItemIndex >= 0) {
-      cart.items[existingItemIndex].quantity += quantity;
-      cart.items[existingItemIndex].subtotal =
-        productItem.items_price * cart.items[existingItemIndex].quantity;
+    if (itemIndex > -1) {
+      cart.items[itemIndex].quantity += quantity;
+      cart.items[itemIndex].subtotal =
+        cart.items[itemIndex].quantity * productItem.items_price;
+      cart.items[itemIndex].shop_id = shop_id;
     } else {
       cart.items.push({
         product_id: product_id,
+        shop_id: shop_id,
         quantity: quantity,
         subtotal: subtotal,
       });
@@ -274,12 +269,11 @@ export const addToCart = async (userId, cartData) => {
       (sum, item) => sum + item.subtotal,
       0
     );
-
     await cart.save();
   }
 
   return await Cart.findById(cart._id)
-    .populate("shop_id", "shop_name logo_url delivery_fee")
+    .populate("items.shop_id", "shop_name logo_url delivery_fee") // Updated population
     .populate("items.product_id", "items_name items_price photo_url");
 };
 
@@ -322,7 +316,7 @@ export const updateCartItem = async (userId, itemId, quantity) => {
   await cart.save();
 
   return await Cart.findById(cart._id)
-    .populate("shop_id", "shop_name logo_url delivery_fee")
+    .populate("items.shop_id", "shop_name logo_url delivery_fee")
     .populate("items.product_id", "items_name items_price photo_url");
 };
 
@@ -356,7 +350,7 @@ export const removeItemFromCart = async (userId, itemId) => {
   await cart.save();
 
   return await Cart.findById(cart._id)
-    .populate("shop_id", "shop_name logo_url delivery_fee")
+    .populate("items.shop_id", "shop_name logo_url delivery_fee")
     .populate("items.product_id", "items_name items_price photo_url");
 };
 
@@ -402,7 +396,7 @@ export const placeCustomerOrder = async (userId, orderData, selectedItems) => {
   }
 
   const cart = await Cart.findOne({ user_id: userId })
-    .populate("shop_id", "delivery_fee")
+    .populate("items.shop_id", "delivery_fee")
     .populate("items.product_id", "items_price items_name status");
 
   if (!cart || cart.items.length === 0) {
@@ -420,6 +414,17 @@ export const placeCustomerOrder = async (userId, orderData, selectedItems) => {
 
   if (itemsToProcess.length === 0) {
     const error = new Error("No items selected for checkout");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const firstShopId = itemsToProcess[0].shop_id._id.toString();
+  const multipleShops = itemsToProcess.some(
+    (item) => item.shop_id._id.toString() !== firstShopId
+  );
+
+  if (multipleShops) {
+    const error = new Error("Can only checkout items from one shop at a time.");
     error.statusCode = 400;
     throw error;
   }
@@ -445,13 +450,14 @@ export const placeCustomerOrder = async (userId, orderData, selectedItems) => {
   }));
 
   const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const shopInfo = itemsToProcess[0].shop_id; // Get shop from first item
   const deliveryFee =
-    fulfillment_option === "pickup" ? 0 : cart.shop_id.delivery_fee || 0;
+    fulfillment_option === "pickup" ? 0 : shopInfo.delivery_fee || 0;
   const totalAmount = subtotal + deliveryFee;
 
   const order = await Order.create({
     customer_id: userId,
-    shop_id: cart.shop_id._id || cart.shop_id,
+    shop_id: shopInfo._id,
     items: orderItems,
     total_amount: totalAmount,
     delivery_fee: deliveryFee,
@@ -484,7 +490,7 @@ export const placeCustomerOrder = async (userId, orderData, selectedItems) => {
   }
 
   await Notification.create({
-    user_id: cart.shop_id._id || cart.shop_id,
+    user_id: shopInfo._id,
     title: "New Order",
     message: `You have a new order #${order._id} from a customer.`,
     type: "order",
@@ -610,7 +616,7 @@ export const markNotificationAsRead = async (notificationId, userId) => {
 export const getCheckout = async (userId, selectedItemIds) => {
   const cart = await Cart.findOne({ user_id: userId })
     .populate(
-      "shop_id",
+      "items.shop_id",
       "shop_name logo_url delivery_fee operating_hours gcash_qr_url"
     )
     .populate(
@@ -637,6 +643,17 @@ export const getCheckout = async (userId, selectedItemIds) => {
     throw error;
   }
 
+  const firstShopId = checkoutItems[0].shop_id._id.toString();
+  const multipleShops = checkoutItems.some(
+    (item) => item.shop_id._id.toString() !== firstShopId
+  );
+
+  if (multipleShops) {
+    const error = new Error("Can only checkout items from one shop at a time.");
+    error.statusCode = 400;
+    throw error;
+  }
+
   for (const cartItem of checkoutItems) {
     const productItem = await Product.findById(
       cartItem.product_id._id || cartItem.product_id
@@ -650,13 +667,16 @@ export const getCheckout = async (userId, selectedItemIds) => {
     }
   }
 
-  const deliveryFee = cart.shop_id.delivery_fee || 0;
+  const shopInfo = checkoutItems[0].shop_id;
+  const deliveryFee = shopInfo.delivery_fee || 0;
+
   const subtotal = checkoutItems.reduce((sum, item) => sum + item.subtotal, 0);
   const totalAmount = subtotal + deliveryFee;
 
   const modifiedCart = {
     ...cart.toObject(),
     items: checkoutItems,
+    shop_id: shopInfo,
   };
 
   return {
@@ -664,7 +684,7 @@ export const getCheckout = async (userId, selectedItemIds) => {
     subtotal: subtotal,
     delivery_fee: deliveryFee,
     total_amount: totalAmount,
-    shop: cart.shop_id,
+    shop: shopInfo,
   };
 };
 
