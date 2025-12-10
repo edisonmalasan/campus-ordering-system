@@ -8,7 +8,7 @@ const orderSchema = new mongoose.Schema({
   },
   shop_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Shop",
+    ref: "shop",
     required: true,
   },
   items: [
@@ -47,6 +47,12 @@ const orderSchema = new mongoose.Schema({
   payment_method: {
     type: String,
     enum: ["gcash", "cash"],
+    required: true,
+  },
+  fulfillment_option: {
+    type: String,
+    enum: ["delivery", "pickup"],
+    default: "delivery",
     required: true,
   },
   payment_status: {

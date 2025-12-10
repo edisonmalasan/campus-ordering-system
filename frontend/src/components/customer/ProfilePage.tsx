@@ -166,6 +166,25 @@ export default function ProfilePage() {
                 onClick={() => {
                   setIsEditing(false);
                   setIsChangingPassword(false);
+                  if (authUser) {
+                    setUser({
+                      name: authUser.name || "",
+                      email: authUser.email || "",
+                      contact_number: authUser.contact_number || "",
+                      profile_photo_url:
+                        authUser.profile_photo_url ||
+                        "https://i.pinimg.com/736x/2c/bb/0e/2cbb0ee6c1c55b1041642128c902dadd.jpg",
+                      department: authUser.department || "",
+                      gender: authUser.gender || "",
+                      member_since: formatJoinDate(authUser.createdAt),
+                      student_id: authUser.student_id || "",
+                    });
+                  }
+                  setPasswordData({
+                    currentPassword: "",
+                    newPassword: "",
+                    confirmPassword: "",
+                  });
                 }}
                 className="text-white hover:bg-white/10 hover:text-white"
               >

@@ -65,7 +65,6 @@ export default function ShopVerification() {
       const response = await adminApi.rejectShop(shopId);
       if (response.success) {
         toast.success("Shop rejected successfully!");
-        // Remove from pending list
         setPendingShops(pendingShops.filter((shop) => shop._id !== shopId));
       }
     } catch (error: any) {
@@ -121,8 +120,16 @@ export default function ShopVerification() {
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                    <Store className="h-6 w-6 text-white" />
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center overflow-hidden">
+                    {shop.profile_photo_url ? (
+                      <img
+                        src={shop.profile_photo_url}
+                        alt={shop.shop_name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Store className="h-6 w-6 text-white" />
+                    )}
                   </div>
                   <div>
                     <CardTitle className="text-xl">{shop.shop_name}</CardTitle>

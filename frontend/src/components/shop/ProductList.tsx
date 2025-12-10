@@ -56,16 +56,23 @@ export default function ProductList() {
 
   const filteredProducts = products.filter(
     (product) =>
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase())
+      product.items_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      product.items_category.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getStatusBadge = (available: boolean) => {
-    return available ? (
-      <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Available</Badge>
-    ) : (
-      <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">Unavailable</Badge>
-    );
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "available":
+        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Available</Badge>;
+      case "unavailable":
+        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Unavailable</Badge>;
+      case "sold_out":
+        return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">Sold Out</Badge>;
+      case "hidden":
+        return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">Hidden</Badge>;
+      default:
+        return <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100">{status}</Badge>;
+    }
   };
 
   if (isLoading) {
@@ -128,10 +135,10 @@ export default function ProductList() {
                 {filteredProducts.map((product) => (
                   <tr key={product._id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      {product.image_url ? (
+                      {product.photo_url ? (
                         <img
-                          src={product.image_url}
-                          alt={product.name}
+                          src={product.photo_url}
+                          alt={product.items_name}
                           className="w-10 h-10 rounded-lg object-cover"
                         />
                       ) : (
@@ -140,10 +147,10 @@ export default function ProductList() {
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-medium">{product.name}</td>
-                    <td className="px-4 py-3 text-gray-600">{product.category}</td>
-                    <td className="px-4 py-3">₱{product.price.toFixed(2)}</td>
-                    <td className="px-4 py-3">{getStatusBadge(product.availability)}</td>
+                    <td className="px-4 py-3 font-medium">{product.items_name}</td>
+                    <td className="px-4 py-3 text-gray-600">{product.items_category}</td>
+                    <td className="px-4 py-3">₱{product.items_price.toFixed(2)}</td>
+                    <td className="px-4 py-3">{getStatusBadge(product.status)}</td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="ghost" size="sm" asChild>

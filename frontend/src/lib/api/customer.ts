@@ -3,20 +3,29 @@ import axiosInstance from "../axios";
 export interface Shop {
   _id: string;
   shop_name: string;
-  logo_url?: string;
+  profile_photo_url?: string;
   delivery_fee: number;
-  isTemporarilyClosed: boolean;
+  operating_hours?: {
+    day: string;
+    open: string;
+    close: string;
+    isClosed: boolean;
+  }[];
+  gcash_qr_url?: string;
+  isTemporarilyClosed?: boolean;
   status: string;
 }
 
 export interface Product {
   _id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  image_url?: string;
-  availability: boolean;
+  items_name: string;
+  items_description: string;
+  items_price: number;
+  items_category: string;
+  photo_url?: string;
+  status: string;
+  stock: number;
+  preparation_time: number;
   shop_id: string;
 }
 
@@ -34,28 +43,43 @@ export interface CartItem {
 
 export interface Order {
   _id: string;
-  order_number: string;
   shop_id: {
     _id: string;
     shop_name: string;
+    profile_photo_url?: string;
   };
   items: Array<{
     product_id: {
-      name: string;
-      price: number;
+      items_name: string;
+      items_price: number;
     };
     quantity: number;
     price: number;
   }>;
-  total_price: number;
+  total_amount: number;
   delivery_fee: number;
   delivery_address: string;
-  status: string;
+  payment_method: string;
+  payment_status: string;
+  fulfillment_option: string;
+  gcash_reference?: string;
+  notes?: string;
+  order_status: string;
   createdAt: string;
 }
 
 export const getShops = async () => {
   const response = await axiosInstance.get("/customer/shops");
+  return response.data;
+};
+
+export const getShopById = async (shopId: string) => {
+  const response = await axiosInstance.get(`/customer/shops/${shopId}`);
+  return response.data;
+};
+
+export const getProducts = async () => {
+  const response = await axiosInstance.get("/customer/products");
   return response.data;
 };
 
@@ -69,8 +93,13 @@ export const getCart = async () => {
   return response.data;
 };
 
-export const addToCart = async (productId: string, quantity: number) => {
+export const addToCart = async (
+  productId: string,
+  quantity: number,
+  shopId: string
+) => {
   const response = await axiosInstance.post("/customer/cart/add", {
+    shop_id: shopId,
     product_id: productId,
     quantity,
   });
@@ -91,14 +120,17 @@ export const removeFromCart = async (itemId: string) => {
   return response.data;
 };
 
-export const getCheckout = async () => {
-  const response = await axiosInstance.get("/customer/checkout");
+export const getCheckout = async (selectedItemIds?: string[]) => {
+  const response = await axiosInstance.post("/customer/checkout", {
+    selected_items: selectedItemIds,
+  });
   return response.data;
 };
 
 export const placeOrder = async (orderData: {
   shop_id: string;
   delivery_address: string;
+  fulfillment_option: "delivery" | "pickup";
 }) => {
   const response = await axiosInstance.post("/customer/orders", orderData);
   return response.data;
