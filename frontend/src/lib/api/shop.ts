@@ -2,17 +2,18 @@ import axiosInstance from "../axios";
 
 export interface Product {
   _id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  image_url?: string;
-  availability: boolean;
+  items_name: string;
+  items_description: string;
+  items_price: number;
+  items_category: string;
+  photo_url: string;
+  status: string;
+  stock: number;
+  preparation_time: number;
 }
 
 export interface Order {
   _id: string;
-  order_number: string;
   customer_id: {
     _id: string;
     name: string;
@@ -20,28 +21,38 @@ export interface Order {
   items: Array<{
     product_id: {
       _id: string;
-      name: string;
-      price: number;
+      items_name: string;
+      items_price: number;
     };
     quantity: number;
     price: number;
   }>;
-  total_price: number;
+  total_amount: number;
   delivery_fee: number;
   delivery_address: string;
-  status: string;
+  order_status: string;
+  payment_status: string;
+  payment_method: string;
+  fulfillment_option: string;
+  notes?: string;
   createdAt: string;
 }
 
-export interface SalesReport {
+export interface DailySalesReport {
   date: string;
-  totalSales: number;
-  totalOrders: number;
-  topProducts: Array<{
-    name: string;
-    quantity: number;
-    revenue: number;
-  }>;
+  total_revenue: number;
+  total_orders: number;
+  orders: any[];
+}
+
+export interface WeeklySalesReport {
+  period: {
+    start: string;
+    end: string;
+  };
+  total_revenue: number;
+  total_orders: number;
+  daily_breakdown: Record<string, { orders: number; revenue: number }>;
 }
 
 export const getProfile = async () => {
@@ -65,12 +76,14 @@ export const getProducts = async () => {
 };
 
 export const addProduct = async (productData: {
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  image_url?: string;
-  availability?: boolean;
+  items_name: string;
+  items_description: string;
+  items_price: number;
+  items_category: string;
+  photo_url?: string;
+  status?: string;
+  stock?: number;
+  preparation_time?: number;
 }) => {
   const response = await axiosInstance.post("/shop/product", productData);
   return response.data;
@@ -109,6 +122,13 @@ export const rejectOrder = async (orderId: string) => {
 
 export const updateOrderStatus = async (orderId: string, status: string) => {
   const response = await axiosInstance.patch(`/shop/orders/${orderId}/status`, {
+    status,
+  });
+  return response.data;
+};
+
+export const updatePaymentStatus = async (orderId: string, status: string) => {
+  const response = await axiosInstance.patch(`/shop/orders/${orderId}/payment-status`, {
     status,
   });
   return response.data;
