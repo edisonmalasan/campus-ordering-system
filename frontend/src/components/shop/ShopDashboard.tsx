@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DollarSign,
-  ShoppingCart,
-  TrendingUp,
-  Package,
-} from "lucide-react";
+import { ShoppingCart, Package } from "lucide-react";
 import * as shopApi from "@/lib/api/shop";
 
 export default function ShopDashboard() {
@@ -59,7 +54,9 @@ export default function ShopDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Orders
+            </CardTitle>
             <ShoppingCart className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
@@ -71,7 +68,9 @@ export default function ShopDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <span className="text-green-600 font-bold text-lg leading-none">
+              ₱
+            </span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -83,9 +82,7 @@ export default function ShopDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Products
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Products</CardTitle>
             <Package className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
@@ -107,7 +104,10 @@ export default function ShopDashboard() {
           ) : (
             <div className="space-y-4">
               {stats.recentOrders.map((order: any) => (
-                <div key={order._id} className="flex items-center justify-between">
+                <div
+                  key={order._id}
+                  className="flex items-center justify-between"
+                >
                   <div>
                     <p className="font-medium">
                       {order.customer_id?.name || "Unknown Customer"}
@@ -117,7 +117,9 @@ export default function ShopDashboard() {
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">₱{order.total_amount?.toFixed(2)}</p>
+                    <p className="font-medium">
+                      ₱{order.total_amount?.toFixed(2)}
+                    </p>
                     <p
                       className={`text-sm ${
                         order.order_status === "pending"
