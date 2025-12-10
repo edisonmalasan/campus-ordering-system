@@ -51,6 +51,31 @@ export const getAvailableShops = async (req, res) => {
   }
 };
 
+export const getShopById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const shop = await customerService.getShopById(id);
+    res.status(200).json({ success: true, data: shop });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
+export const getAllAvailableProducts = async (req, res) => {
+  try {
+    const products = await customerService.getAllAvailableProducts();
+    res.status(200).json({ success: true, data: products });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
 export const getShopProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -136,7 +161,8 @@ export const placeCustomerOrder = async (req, res) => {
     const orderData = req.body;
     const order = await customerService.placeCustomerOrder(
       req.user.userId,
-      orderData
+      orderData,
+      req.body.selected_items
     );
     res.status(201).json({ success: true, data: order });
   } catch (error) {
@@ -217,7 +243,10 @@ export const markNotificationAsRead = async (req, res) => {
 
 export const getCheckout = async (req, res) => {
   try {
-    const checkoutData = await customerService.getCheckout(req.user.userId);
+    const checkoutData = await customerService.getCheckout(
+      req.user.userId,
+      req.body.selected_items
+    );
     res.status(200).json({ success: true, data: checkoutData });
   } catch (error) {
     res.status(error.statusCode || 500).json({
