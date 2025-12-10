@@ -12,6 +12,7 @@ export interface Shop {
   name: string;
   email: string;
   shop_name: string;
+  profile_photo_url?: string;
   business_permit_code?: string;
   delivery_fee: number;
   contact_number?: string;
@@ -23,6 +24,7 @@ export interface Customer {
   _id: string;
   name: string;
   email: string;
+  profile_photo_url?: string;
   department?: string;
   student_id?: string;
   gender?: string;
