@@ -93,14 +93,67 @@ export const getAvailableShops = async () => {
     .sort({ shop_name: 1 });
 
   return shops.map((shop) => ({
-      id: shop._id,
-      shop_name: shop.shop_name,
-      logo_url: shop.logo_url,
-      delivery_fee: shop.delivery_fee,
-      operating_hours: shop.operating_hours,
-      status: shop.status,
-      isTemporarilyClosed: shop.isTemporarilyClosed,
+    _id: shop._id,
+    shop_name: shop.shop_name,
+    logo_url: shop.logo_url,
+    profile_photo_url: shop.profile_photo_url,
+    delivery_fee: shop.delivery_fee,
+    operating_hours: shop.operating_hours,
+    status: shop.status,
+    isTemporarilyClosed: shop.isTemporarilyClosed,
   }));
+};
+
+export const getShopById = async (shopId) => {
+  const shop = await Shop.findById(shopId).select("-password");
+
+  if (!shop) {
+    const error = new Error("Shop not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // Optional: Check if shop is verified, though viewing unverified shops might be allowed in some contexts (e.g. preview)
+  // For now, let's enforce verified
+  if (shop.status !== "verified") {
+    const error = new Error("Shop is not verified");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return {
+    _id: shop._id,
+    shop_name: shop.shop_name,
+    logo_url: shop.logo_url,
+    profile_photo_url: shop.profile_photo_url,
+    delivery_fee: shop.delivery_fee,
+    operating_hours: shop.operating_hours,
+    status: shop.status,
+    isTemporarilyClosed: shop.isTemporarilyClosed,
+    gcash_qr_url: shop.gcash_qr_url,
+  };
+};
+
+export const getAllAvailableProducts = async () => {
+  try {
+    const products = await Product.find({
+      status: "available",
+    })
+      .populate(
+        "shop_id",
+        "shop_name status operating_hours isTemporarilyClosed"
+      )
+      .sort({ createdAt: -1 });
+
+    const filtered = products.filter((product) => {
+      if (!product.shop_id) return false;
+      return product.shop_id.status === "verified";
+    });
+    return filtered;
+  } catch (error) {
+    console.error("Error in getAllAvailableProducts:", error);
+    throw error;
+  }
 };
 
 export const getShopProduct = async (shopId) => {
@@ -307,18 +360,37 @@ export const removeItemFromCart = async (userId, itemId) => {
     .populate("items.product_id", "items_name items_price photo_url");
 };
 
-export const placeCustomerOrder = async (userId, orderData) => {
-  const { delivery_address, payment_method, gcash_reference, notes } =
-    orderData;
+export const placeCustomerOrder = async (userId, orderData, selectedItems) => {
+  const {
+    delivery_address,
+    payment_method,
+    gcash_reference,
+    notes,
+    fulfillment_option,
+  } = orderData;
 
-  if (!delivery_address || !payment_method) {
-    const error = new Error("delivery_address and payment_method are required");
+  if (
+    (!delivery_address && fulfillment_option === "delivery") ||
+    !payment_method ||
+    !fulfillment_option
+  ) {
+    const error = new Error(
+      "delivery_address (if delivery), payment_method, and fulfillment_option are required"
+    );
     error.statusCode = 400;
     throw error;
   }
 
   if (!["gcash", "cash"].includes(payment_method)) {
     const error = new Error("payment_method must be 'gcash' or 'cash'");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!["delivery", "pickup"].includes(fulfillment_option)) {
+    const error = new Error(
+      "fulfillment_option must be 'delivery' or 'pickup'"
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -331,7 +403,7 @@ export const placeCustomerOrder = async (userId, orderData) => {
 
   const cart = await Cart.findOne({ user_id: userId })
     .populate("shop_id", "delivery_fee")
-    .populate("items.product_id", "items_price");
+    .populate("items.product_id", "items_price items_name status");
 
   if (!cart || cart.items.length === 0) {
     const error = new Error("Cart is empty");
@@ -339,8 +411,23 @@ export const placeCustomerOrder = async (userId, orderData) => {
     throw error;
   }
 
-  for (const cartItem of cart.items) {
-    const productItem = await Product.findById(cartItem.product_id);
+  let itemsToProcess = cart.items;
+  if (selectedItems && selectedItems.length > 0) {
+    itemsToProcess = cart.items.filter((item) =>
+      selectedItems.includes(item._id.toString())
+    );
+  }
+
+  if (itemsToProcess.length === 0) {
+    const error = new Error("No items selected for checkout");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  for (const cartItem of itemsToProcess) {
+    const productItem = await Product.findById(
+      cartItem.product_id._id || cartItem.product_id
+    );
     if (!productItem || productItem.status !== "available") {
       const error = new Error(
         `Product ${productItem?.items_name || "unknown"} is no longer available`
@@ -350,15 +437,17 @@ export const placeCustomerOrder = async (userId, orderData) => {
     }
   }
 
-  const orderItems = cart.items.map((cartItem) => ({
+  const orderItems = itemsToProcess.map((cartItem) => ({
     product_id: cartItem.product_id._id || cartItem.product_id,
     quantity: cartItem.quantity,
     price: cartItem.product_id.items_price,
     subtotal: cartItem.subtotal,
   }));
 
-  const deliveryFee = cart.shop_id.delivery_fee || 0;
-  const totalAmount = cart.total_amount + deliveryFee;
+  const subtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+  const deliveryFee =
+    fulfillment_option === "pickup" ? 0 : cart.shop_id.delivery_fee || 0;
+  const totalAmount = subtotal + deliveryFee;
 
   const order = await Order.create({
     customer_id: userId,
@@ -366,15 +455,33 @@ export const placeCustomerOrder = async (userId, orderData) => {
     items: orderItems,
     total_amount: totalAmount,
     delivery_fee: deliveryFee,
-    delivery_address: delivery_address,
+    delivery_address:
+      fulfillment_option === "pickup" ? "Pickup at Store" : delivery_address,
     payment_method: payment_method,
+    fulfillment_option: fulfillment_option,
     payment_status: payment_method === "cash" ? "pending" : "completed",
     gcash_reference: gcash_reference,
     notes: notes,
     order_status: "pending",
   });
 
-  await Cart.findByIdAndDelete(cart._id);
+  if (
+    selectedItems &&
+    selectedItems.length > 0 &&
+    selectedItems.length < cart.items.length
+  ) {
+    cart.items = cart.items.filter(
+      (item) => !selectedItems.includes(item._id.toString())
+    );
+
+    cart.total_amount = cart.items.reduce(
+      (sum, item) => sum + item.subtotal,
+      0
+    );
+    await cart.save();
+  } else {
+    await Cart.findByIdAndDelete(cart._id);
+  }
 
   await Notification.create({
     user_id: cart.shop_id._id || cart.shop_id,
@@ -393,14 +500,20 @@ export const getOrderHistory = async (userId) => {
   const orders = await Order.find({ customer_id: userId })
     .sort({ createdAt: -1 })
     .populate("shop_id", "shop_name logo_url")
-    .populate("items.product_id", "items_name items_price photo_url");
+    .populate(
+      "items.product_id",
+      "items_name items_price photo_url items_description"
+    );
 
   return orders;
 };
 
 export const getOrderDetails = async (orderId, userId) => {
   const order = await Order.findById(orderId)
-    .populate("shop_id", "shop_name logo_url name email contact_number")
+    .populate(
+      "shop_id",
+      "shop_name profile_photo_url logo_url name email contact_number"
+    )
     .populate(
       "items.product_id",
       "items_name items_price photo_url items_description"
@@ -412,7 +525,7 @@ export const getOrderDetails = async (orderId, userId) => {
     throw error;
   }
 
-  if (order.customer_id.toString() !== userId) {
+  if (order.customer_id.toString() !== userId.toString()) {
     const error = new Error("Access denied");
     error.statusCode = 403;
     throw error;
@@ -436,7 +549,6 @@ export const handleCancelOrder = async (orderId, userId) => {
     throw error;
   }
 
-  // rule to allow only cancellation within 10 mins of placing order (nasa paper to)
   const timeSinceOrder = Date.now() - order.createdAt.getTime();
   if (timeSinceOrder > 10000) {
     const error = new Error("Cannot cancel order after 10 seconds");
@@ -495,9 +607,12 @@ export const markNotificationAsRead = async (notificationId, userId) => {
   return notification;
 };
 
-export const getCheckout = async (userId) => {
+export const getCheckout = async (userId, selectedItemIds) => {
   const cart = await Cart.findOne({ user_id: userId })
-    .populate("shop_id", "shop_name logo_url delivery_fee operating_hours")
+    .populate(
+      "shop_id",
+      "shop_name logo_url delivery_fee operating_hours gcash_qr_url"
+    )
     .populate(
       "items.product_id",
       "items_name items_price photo_url items_description"
@@ -509,7 +624,20 @@ export const getCheckout = async (userId) => {
     throw error;
   }
 
-  for (const cartItem of cart.items) {
+  let checkoutItems = cart.items;
+  if (selectedItemIds && selectedItemIds.length > 0) {
+    checkoutItems = cart.items.filter((item) =>
+      selectedItemIds.includes(item._id.toString())
+    );
+  }
+
+  if (checkoutItems.length === 0) {
+    const error = new Error("No items selected for checkout");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  for (const cartItem of checkoutItems) {
     const productItem = await Product.findById(
       cartItem.product_id._id || cartItem.product_id
     );
@@ -523,11 +651,16 @@ export const getCheckout = async (userId) => {
   }
 
   const deliveryFee = cart.shop_id.delivery_fee || 0;
-  const subtotal = cart.total_amount;
+  const subtotal = checkoutItems.reduce((sum, item) => sum + item.subtotal, 0);
   const totalAmount = subtotal + deliveryFee;
 
+  const modifiedCart = {
+    ...cart.toObject(),
+    items: checkoutItems,
+  };
+
   return {
-    cart: cart,
+    cart: modifiedCart,
     subtotal: subtotal,
     delivery_fee: deliveryFee,
     total_amount: totalAmount,
@@ -573,7 +706,6 @@ export const claimOrder = async (orderId, userId) => {
     throw error;
   }
 
-  // will only allow claiming if order is ready for pickup or delivered
   if (!["ready_for_pickup", "delivered"].includes(order.order_status)) {
     const error = new Error(
       `Cannot claim order with status: ${order.order_status}. Order must be ready_for_pickup or delivered.`
