@@ -1,482 +1,521 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, MapPin, CreditCard, X, StickyNote } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  CreditCard,
+  X,
+  StickyNote,
+  Loader2,
+  Package,
+  Truck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import * as customerApi from "@/lib/api/customer";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-interface CartItem {
-  id: number;
+interface CheckoutItem {
+  id: string;
   name: string;
   price: number;
   quantity: number;
-  shopName: string;
+  image_url?: string;
 }
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
-
-  const checkoutItems = (location.state?.items as CartItem[]) || [];
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
+  const [totals, setTotals] = useState({
+    subtotal: 0,
+    deliveryFee: 0,
+    total: 0,
+  });
+  const [shopName, setShopName] = useState("");
 
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "gcash">("cash");
-  const [showGCashModal, setShowGCashModal] = useState(false);
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [fulfillmentOption, setFulfillmentOption] = useState<
+    "delivery" | "pickup"
+  >("delivery");
+  const [address, setAddress] = useState("Dormitory 1, Room 305");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [note, setNote] = useState("");
-  const [address, setAddress] = useState("Room D425 - SAMCIS");
-  const [showAddressModal, setShowAddressModal] = useState(false);
-  const [tempAddress, setTempAddress] = useState("");
 
-  // Calculate totals dynamically based on passed items
-  const subtotal = checkoutItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-  const deliveryFee = checkoutItems.length > 0 ? 50 : 0;
-  const total = subtotal + deliveryFee;
+  const [showQrModal, setShowQrModal] = useState(false);
+  const [gcashQrUrl, setGcashQrUrl] = useState("");
 
-  // Redirect if no items (e.g. direct access)
   useEffect(() => {
-    if (checkoutItems.length === 0) {
-      // navigate("/customer/cart"); // Commented out for dev/testing ease, but good practice
-    }
-  }, [checkoutItems, navigate]);
+    fetchCheckoutDetails();
+  }, []);
 
-  const handleContinue = () => {
-    if (paymentMethod === "gcash") {
-      setShowGCashModal(true);
+  useEffect(() => {
+    if (fulfillmentOption === "pickup") {
+      setTotals((prev) => ({
+        ...prev,
+        total: prev.subtotal,
+      }));
     } else {
-      setShowConfirmModal(true);
+      fetchCheckoutDetails();
+    }
+  }, [fulfillmentOption]);
+
+  const fetchCheckoutDetails = async () => {
+    try {
+      const selectedItemIds = location.state?.selectedItems || [];
+      const response = await customerApi.getCheckout(selectedItemIds);
+      const data = response.data;
+
+      if (
+        !data ||
+        !data.cart ||
+        !data.cart.items ||
+        data.cart.items.length === 0
+      ) {
+        setCheckoutItems([]);
+        return;
+      }
+
+      const items = data.cart.items.map((item: any) => ({
+        id: item._id,
+        name: item.product_id.items_name || item.product_id.name,
+        price: item.product_id.items_price || item.product_id.price,
+        quantity: item.quantity,
+        image_url: item.product_id.photo_url || item.product_id.image_url,
+      }));
+
+      setCheckoutItems(items);
+      setShopName(data.shop?.shop_name || "Store");
+      setGcashQrUrl(data.shop?.gcash_qr_url || "");
+
+      const deliveryFee =
+        fulfillmentOption === "pickup" ? 0 : data.delivery_fee || 0;
+
+      setTotals({
+        subtotal: data.subtotal || 0,
+        deliveryFee: deliveryFee,
+        total: (data.subtotal || 0) + deliveryFee,
+      });
+    } catch (error: any) {
+      console.error("Error fetching checkout:", error);
+      toast.error("Failed to load checkout details");
+      navigate("/customer/cart");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleOpenAddressModal = () => {
-    setTempAddress(address);
-    setShowAddressModal(true);
-  };
-
-  const handleSaveAddress = () => {
-    if (tempAddress.trim()) {
-      setAddress(tempAddress);
+  const handlePlaceOrder = async () => {
+    if (paymentMethod === "gcash" && !referenceNumber) {
+      toast.error("Please enter GCash reference number");
+      return;
     }
-    setShowAddressModal(false);
+
+    if (fulfillmentOption === "delivery" && !address.trim()) {
+      toast.error("Delivery address is required for delivery orders.");
+      return;
+    }
+
+    try {
+      setIsPlacingOrder(true);
+      const orderPayload = {
+        shop_id: checkoutItems[0]?.id,
+        delivery_address:
+          fulfillmentOption === "pickup" ? "Pickup at Store" : address,
+        payment_method: paymentMethod,
+        fulfillment_option: fulfillmentOption,
+        notes: note,
+        gcash_reference:
+          paymentMethod === "gcash" ? referenceNumber : undefined,
+        selected_items: location.state?.selectedItems,
+      };
+
+      const response = await customerApi.placeOrder(orderPayload as any);
+
+      toast.success("Order placed successfully!");
+      navigate(`/customer/cart/order-placed`, {
+        state: {
+          orderId: response.data._id,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error placing order:", error);
+      toast.error(error.response?.data?.error || "Failed to place order");
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
-  const handleGCashConfirm = () => {
-    if (!referenceNumber.trim()) return;
-    setShowGCashModal(false);
-    setShowConfirmModal(true);
-  };
-
-  const handlePlaceOrder = () => {
-    navigate("/customer/cart/order-placed", {
-      state: {
-        paymentMethod: paymentMethod === "cash" ? "Cash on Delivery" : "GCash",
-        total,
-        address,
-        items: checkoutItems, // Pass items to order placed if needed
-      },
-    });
-  };
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
 
   return (
-    <div className={`min-h-screen bg-white ${isMobile ? "pb-20 pt-4" : "p-8"}`}>
-      {/* Header - Desktop Only Title */}
-      {!isMobile && (
-        <div className="max-w-6xl mx-auto mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Checkout</h1>
-          <p className="text-muted-foreground mt-1">
-            Complete your order details
-          </p>
-        </div>
-      )}
-
-      {/* Mobile Header (Back Button) */}
-      {isMobile && (
-        <div className="px-4 mb-6 flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="-ml-2 mr-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <h1 className="text-xl font-bold">Checkout</h1>
-        </div>
-      )}
-
-      <div
-        className={`max-w-6xl mx-auto ${
-          !isMobile && "grid grid-cols-1 md:grid-cols-3 gap-12"
-        }`}
-      >
-        {/* Left Column: Form Details */}
-        <div className={`space-y-8 ${!isMobile && "md:col-span-2"}`}>
-          {/* Order Brief Summary (New Addition to see what we are buying) */}
-          <div className="space-y-4 px-4 md:px-0">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              Order Details
-            </h2>
-            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-3">
-              {checkoutItems.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="flex justify-between items-center text-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-gray-500">
-                      {item.quantity}x
-                    </span>
-                    <span className="text-gray-900">{item.name}</span>
-                  </div>
-                  <span className="font-medium text-gray-900">
-                    ₱ {(item.price * item.quantity).toFixed(0)}
-                  </span>
-                </div>
-              ))}
-              {checkoutItems.length === 0 && (
-                <p className="text-gray-400 italic">No items selected</p>
-              )}
+    <div className={`min-h-screen bg-gray-50 ${isMobile ? "pb-24" : "pb-12"}`}>
+      {/* Header */}
+      <div className="bg-white border-b sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/customer/cart")}
+              className="hover:bg-gray-100 rounded-full"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold">Checkout</h1>
+              <span className="text-xs text-green-600 font-medium">
+                {shopName}
+              </span>
             </div>
           </div>
+        </div>
+      </div>
 
-          <Separator className={isMobile ? "mx-4 w-auto" : ""} />
-
-          {/* Delivery Section */}
-          <div className="space-y-4 px-4 md:px-0">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-green-600" /> Delivery Address
+      <div className="max-w-6xl mx-auto p-4 grid gap-6 md:grid-cols-[1fr_350px]">
+        <div className="space-y-6">
+          <div className="bg-white p-4 rounded-xl shadow-sm border space-y-4">
+            <h2 className="font-bold flex items-center gap-2">
+              <Package className="h-4 w-4" /> Fulfillment Option
             </h2>
-            <div className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex items-center justify-between hover:border-green-200 transition-colors cursor-pointer group">
-              <div>
-                <p className="font-medium text-gray-900">{address}</p>
-                <p className="text-sm text-gray-500">
-                  Saint Louis University, Baguio City
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleOpenAddressModal}
-                className="text-green-600 font-bold hover:text-green-700 hover:bg-green-50"
-              >
-                CHANGE
-              </Button>
-            </div>
-          </div>
-
-          <Separator className={isMobile ? "mx-4 w-auto" : ""} />
-
-          {/* Payment Section */}
-          <div className="space-y-4 px-4 md:px-0">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-green-600" /> Payment Method
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <label
-                className={`cursor-pointer border rounded-xl p-4 flex items-start gap-4 transition-all ${
-                  paymentMethod === "cash"
-                    ? "border-green-600 bg-green-50/30 ring-1 ring-green-600"
-                    : "border-gray-200 hover:border-green-200"
+            <RadioGroup
+              value={fulfillmentOption}
+              onValueChange={(val: "delivery" | "pickup") =>
+                setFulfillmentOption(val)
+              }
+              className="grid grid-cols-2 gap-4"
+            >
+              <div
+                onClick={() => setFulfillmentOption("delivery")}
+                className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
+                  fulfillmentOption === "delivery"
+                    ? "border-green-600 bg-green-50/50"
+                    : "border-gray-100 hover:border-gray-200"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="payment"
-                  className="mt-1"
-                  checked={paymentMethod === "cash"}
+                <Truck
+                  className={`h-6 w-6 ${
+                    fulfillmentOption === "delivery"
+                      ? "text-green-600"
+                      : "text-gray-400"
+                  }`}
+                />
+                <span
+                  className={`font-semibold ${
+                    fulfillmentOption === "delivery"
+                      ? "text-green-700"
+                      : "text-gray-600"
+                  }`}
+                >
+                  Delivery
+                </span>
+                <RadioGroupItem
+                  value="delivery"
+                  id="delivery"
+                  className="sr-only"
+                />
+              </div>
+              <div
+                onClick={() => setFulfillmentOption("pickup")}
+                className={`cursor-pointer border-2 rounded-xl p-4 flex flex-col items-center justify-center gap-2 transition-all ${
+                  fulfillmentOption === "pickup"
+                    ? "border-green-600 bg-green-50/50"
+                    : "border-gray-100 hover:border-gray-200"
+                }`}
+              >
+                <Package
+                  className={`h-6 w-6 ${
+                    fulfillmentOption === "pickup"
+                      ? "text-green-600"
+                      : "text-gray-400"
+                  }`}
+                />
+                <span
+                  className={`font-semibold ${
+                    fulfillmentOption === "pickup"
+                      ? "text-green-700"
+                      : "text-gray-600"
+                  }`}
+                >
+                  Pickup
+                </span>
+                <RadioGroupItem
+                  value="pickup"
+                  id="pickup"
+                  className="sr-only"
+                />
+              </div>
+            </RadioGroup>
+          </div>
+
+          {fulfillmentOption === "delivery" && (
+            <div className="bg-white p-4 rounded-xl shadow-sm border space-y-4">
+              <div className="flex justify-between items-start">
+                <h2 className="font-bold flex items-center gap-2">
+                  <MapPin className="h-4 w-4" /> Delivery Address
+                </h2>
+              </div>
+              <div className="flex gap-3 items-start p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <div className="flex-1">
+                  <Input
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="border-0 bg-transparent p-0 h-auto focus-visible:ring-0 font-medium text-gray-900 placeholder:text-gray-400"
+                    placeholder="Enter delivery address..."
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white p-4 rounded-xl shadow-sm border space-y-4">
+            <h2 className="font-bold flex items-center gap-2">
+              <CreditCard className="h-4 w-4" /> Payment Method
+            </h2>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(val: "cash" | "gcash") => setPaymentMethod(val)}
+              className="space-y-3"
+            >
+              <div
+                className={`flex items-center space-x-3 border p-3 rounded-lg transition-colors ${
+                  paymentMethod === "cash"
+                    ? "border-green-600 bg-green-50/30"
+                    : "hover:bg-gray-50"
+                }`}
+              >
+                <RadioGroupItem
+                  value="cash"
+                  id="cash"
+                  className="text-green-600"
                   onChange={() => setPaymentMethod("cash")}
                 />
-                <div>
-                  <span className="font-bold block text-gray-900">
-                    Cash on Delivery
-                  </span>
+                <Label
+                  htmlFor="cash"
+                  className="flex-1 cursor-pointer"
+                  onClick={() => setPaymentMethod("cash")}
+                >
+                  <span className="font-bold block text-gray-900">Cash</span>
                   <span className="text-sm text-gray-500">
                     Pay when you receive current order
                   </span>
-                </div>
-              </label>
-
-              <label
-                className={`cursor-pointer border rounded-xl p-4 flex items-start gap-4 transition-all ${
+                </Label>
+              </div>
+              <div
+                className={`flex items-center space-x-3 border p-3 rounded-lg transition-colors ${
                   paymentMethod === "gcash"
-                    ? "border-blue-600 bg-blue-50/30 ring-1 ring-blue-600"
-                    : "border-gray-200 hover:border-blue-200"
+                    ? "border-green-600 bg-green-50/30"
+                    : "hover:bg-gray-50"
                 }`}
               >
-                <input
-                  type="radio"
-                  name="payment"
-                  className="mt-1"
-                  checked={paymentMethod === "gcash"}
+                <RadioGroupItem
+                  value="gcash"
+                  id="gcash"
+                  className="text-green-600"
                   onChange={() => setPaymentMethod("gcash")}
                 />
-                <div>
-                  <span className="font-bold block text-blue-700">
-                    GCash E-Wallet
-                  </span>
+                <Label
+                  htmlFor="gcash"
+                  className="flex-1 cursor-pointer"
+                  onClick={() => setPaymentMethod("gcash")}
+                >
+                  <span className="font-bold block text-blue-700">GCash</span>
                   <span className="text-sm text-gray-500">
-                    Scan QR code to pay digitally
+                    Pay via GCash wallet
                   </span>
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {paymentMethod === "gcash" && (
+              <div className="pt-2 animate-in slide-in-from-top-2 space-y-3">
+                {gcashQrUrl && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-blue-200 text-blue-700 hover:bg-blue-50"
+                    onClick={() => setShowQrModal(true)}
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" /> Scan/View GCash QR
+                  </Button>
+                )}
+                <div>
+                  <Label
+                    htmlFor="reference"
+                    className="text-sm font-medium mb-1.5 block"
+                  >
+                    Reference Number
+                  </Label>
+                  <Input
+                    id="reference"
+                    placeholder="Enter GCash reference number"
+                    value={referenceNumber}
+                    onChange={(e) => setReferenceNumber(e.target.value)}
+                    className="border-green-200 focus:border-green-500 focus:ring-green-500/20"
+                  />
                 </div>
-              </label>
-            </div>
+              </div>
+            )}
           </div>
 
-          <Separator className={isMobile ? "mx-4 w-auto" : ""} />
-
-          {/* Note Section */}
-          <div className="space-y-4 px-4 md:px-0">
-            <h2 className="font-bold text-lg flex items-center gap-2">
-              <StickyNote className="h-5 w-5 text-green-600" /> Note to
-              Store/Rider
+          <div className="bg-white p-4 rounded-xl shadow-sm border space-y-4">
+            <h2 className="font-bold flex items-center gap-2">
+              <StickyNote className="h-4 w-4" /> Note to Store
             </h2>
-            <div className="space-y-2">
-              <textarea
-                className="w-full min-h-[100px] p-4 text-sm border border-gray-200 rounded-xl focus:border-green-500 focus:ring-1 focus:ring-green-500 outline-none transition-all resize-none bg-white"
-                placeholder="Any special requests? e.g. extra sauce, no plastic cutlery..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                maxLength={200}
-              />
-              <div className="flex justify-end">
-                <span
-                  className={`text-xs font-medium transition-colors ${
-                    note.length >= 200
-                      ? "text-red-600"
-                      : note.length > 180
-                      ? "text-amber-600"
-                      : "text-gray-400"
-                  }`}
-                >
-                  {note.length}/200 characters
-                </span>
-              </div>
-            </div>
+            <Textarea
+              placeholder="Add specific instructions (e.g., 'Ensure soup is hot', 'Less ice')"
+              className="resize-none border-gray-200 focus:border-green-500 min-h-[100px]"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
           </div>
         </div>
 
-        {/* summary card*/}
-        <div className={`space-y-6 ${!isMobile && "md:col-span-1"}`}>
-          <div
-            className={`p-6 rounded-2xl border border-gray-100 shadow-sm bg-white ${
-              !isMobile ? "sticky top-10" : "mx-4 mt-8 bg-gray-50"
-            }`}
-          >
-            <h3 className="font-bold text-xl mb-4">Order Summary</h3>
+        {/* Right Column - Summary */}
+        <div className="space-y-6">
+          <div className="bg-white p-4 rounded-xl shadow-sm border space-y-4 md:sticky md:top-20">
+            <h2 className="font-bold text-lg">Order Summary</h2>
+            <div className="max-h-[300px] overflow-y-auto space-y-4 pr-2">
+              {checkoutItems.map((item) => (
+                <div key={item.id} className="flex gap-3">
+                  <div className="h-16 w-16 bg-gray-100 rounded-lg shrink-0 overflow-hidden">
+                    {item.image_url ? (
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="h-full w-full flex items-center justify-center text-gray-400">
+                        <Package className="h-6 w-6" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start">
+                      <p className="font-medium text-sm line-clamp-2">
+                        {item.name}
+                      </p>
+                    </div>
+                    <div className="mt-1 flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">
+                        ₱{item.price} x {item.quantity}
+                      </span>
+                      <span className="font-semibold">
+                        ₱{(item.price * item.quantity).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
-            <div className="space-y-3 text-sm text-gray-600 mb-6">
+            <Separator />
+
+            <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span className="font-medium text-gray-900">
-                  ₱ {subtotal.toFixed(0)}
-                </span>
+                <span className="text-gray-600">Subtotal</span>
+                <span>₱{totals.subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span>Delivery Fee</span>
-                <span className="font-medium text-gray-900">
-                  ₱ {deliveryFee.toFixed(0)}
+                <span className="text-gray-600">Delivery Fee</span>
+                <span>
+                  {fulfillmentOption === "pickup" ? (
+                    <span className="text-green-600 font-medium">
+                      Free (Pickup)
+                    </span>
+                  ) : (
+                    `₱${totals.deliveryFee.toFixed(2)}`
+                  )}
                 </span>
               </div>
               <Separator />
-              <div className="flex justify-between text-base font-bold text-gray-900 pt-2">
-                <span>Total to Pay</span>
-                <span className="text-green-600 text-xl">
-                  ₱ {total.toFixed(0)}
+              <div className="flex justify-between font-bold text-lg pt-2">
+                <span>Total</span>
+                <span className="text-green-600">
+                  ₱{totals.total.toFixed(2)}
                 </span>
               </div>
             </div>
 
             <Button
-              onClick={handleContinue}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold h-14 rounded-xl text-lg shadow-lg shadow-green-200 transition-all hover:translate-y-[-2px]"
-              disabled={checkoutItems.length === 0}
+              className="w-full h-12 text-lg font-bold bg-green-600 hover:bg-green-700 shadow-lg shadow-green-600/20"
+              onClick={handlePlaceOrder}
+              disabled={isPlacingOrder}
             >
-              {paymentMethod === "gcash"
-                ? "Proceed to Payment"
-                : "Place Order Now"}
+              {isPlacingOrder ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Placing Order...
+                </>
+              ) : (
+                "Place Order"
+              )}
             </Button>
           </div>
         </div>
       </div>
+      {showQrModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 relative animate-in zoom-in-95 duration-200">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-2 top-2 rounded-full hover:bg-gray-100"
+              onClick={() => setShowQrModal(false)}
+            >
+              <X className="h-5 w-5 text-gray-500" />
+            </Button>
 
-      {showAddressModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 p-6 space-y-6">
-            <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-900">
-                Change Location
-              </h2>
-              <p className="text-gray-500 text-sm">
-                Where should we deliver this?
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">
-                Room / Building / Landmark
-              </label>
-              <Input
-                value={tempAddress}
-                onChange={(e) => setTempAddress(e.target.value)}
-                placeholder="e.g. Room D425, Main Library..."
-                className="h-12 rounded-xl"
-                autoFocus
-              />
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <Button
-                className="w-full bg-gray-900 hover:bg-black h-12 rounded-xl font-bold"
-                onClick={handleSaveAddress}
-              >
-                Update Location
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-500 hover:text-gray-900 h-10 rounded-xl"
-                onClick={() => setShowAddressModal(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* gc modal */}
-      {showGCashModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="p-4 border-b flex justify-between items-center bg-[#007DFE] text-white">
-              <h3 className="font-bold text-lg">Pay with GCash</h3>
-              <button
-                onClick={() => setShowGCashModal(false)}
-                className="hover:bg-white/20 p-2 rounded-full transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-8 space-y-6 flex flex-col items-center">
-              <div className="w-48 h-48 bg-gray-50 rounded-2xl flex items-center justify-center border-2 border-dashed border-gray-200">
-                <div className="text-center p-2">
-                  <div className="mx-auto bg-blue-100 p-3 rounded-full w-12 h-12 flex items-center justify-center mb-2">
-                    <CreditCard className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <p className="font-bold text-blue-600">SCAN QR CODE</p>
-                </div>
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <img
+                  src="/gcash-logo.png"
+                  alt="GCash"
+                  className="h-8 object-contain"
+                  onError={(e) => (e.currentTarget.style.display = "none")}
+                />
               </div>
+              <h3 className="text-lg font-bold text-gray-900">Scan to Pay</h3>
 
-              <div className="w-full space-y-2">
-                <label className="text-xs font-bold uppercase text-gray-500 tracking-wider">
-                  Reference Number
-                </label>
-                <Input
-                  placeholder="000 000 000 000"
-                  value={referenceNumber}
-                  onChange={(e) => setReferenceNumber(e.target.value)}
-                  className="text-center font-mono text-xl h-14 border-gray-200 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
-                  maxLength={13}
+              <div className="border-2 border-dashed border-gray-200 rounded-xl p-2 bg-gray-50">
+                <img
+                  src={gcashQrUrl}
+                  alt="Shop GCash QR"
+                  className="w-full h-auto rounded-lg object-contain bg-white"
                 />
               </div>
 
-              <Button
-                className="w-full bg-[#007DFE] hover:bg-blue-600 h-14 text-lg font-bold rounded-xl shadow-lg shadow-blue-200"
-                onClick={handleGCashConfirm}
-                disabled={!referenceNumber.trim()}
-              >
-                Confirm Payment
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* confirm order modal*/}
-      {showConfirmModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 p-8 space-y-6">
-            <div className="text-center space-y-2">
-              <h2 className="text-2xl font-extrabold text-gray-900">
-                Confirm Order
-              </h2>
-              <p className="text-gray-500">Please review your order details</p>
-            </div>
-
-            <div className="space-y-4 bg-gray-50 p-6 rounded-2xl border border-gray-100">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Deliver to</span>
-                <span className="font-bold text-gray-900 text-right">
-                  {address}
-                </span>
-              </div>
-              {note && (
-                <div className="flex justify-between text-sm items-start gap-4">
-                  <span className="text-gray-500">Note</span>
-                  <span className="font-medium text-gray-900 text-right text-xs italic bg-white p-1 rounded border overflow-hidden text-ellipsis line-clamp-2">
-                    {note}
+              <div className="text-sm text-gray-500">
+                <p>1. Open GCash App</p>
+                <p>2. Tap "QR" then "Scan QR"</p>
+                <p>
+                  3. Enter Amount:{" "}
+                  <span className="font-bold text-gray-900">
+                    ₱{totals.total.toFixed(2)}
                   </span>
-                </div>
-              )}
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Payment</span>
-                <span className="font-bold text-gray-900 text-right uppercase">
-                  {paymentMethod}
-                </span>
-              </div>
-              {paymentMethod === "gcash" && (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Ref No.</span>
-                  <span className="font-mono font-bold text-blue-600 text-right text-xs bg-blue-50 px-2 py-0.5 rounded">
-                    {referenceNumber}
-                  </span>
-                </div>
-              )}
-
-              {/* Items Summary in Confirmation */}
-              <Separator className="bg-gray-200" />
-              <div className="py-2 space-y-1">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                  Items
                 </p>
-                {checkoutItems.map((item, idx) => (
-                  <div key={idx} className="flex justify-between text-sm">
-                    <span className="text-gray-600">
-                      {item.quantity}x {item.name}
-                    </span>
-                    <span className="font-medium text-gray-900">
-                      ₱ {(item.price * item.quantity).toFixed(0)}
-                    </span>
-                  </div>
-                ))}
               </div>
 
-              <Separator className="bg-gray-200" />
-              <div className="flex justify-between items-end pt-2">
-                <span className="text-gray-600 font-medium">Total Amount</span>
-                <span className="text-2xl font-bold text-green-600">
-                  ₱ {total.toFixed(0)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3">
               <Button
-                className="w-full bg-gray-900 hover:bg-black h-14 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all"
-                onClick={handlePlaceOrder}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                onClick={() => setShowQrModal(false)}
               >
-                Place Order
-              </Button>
-              <Button
-                variant="ghost"
-                className="w-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 h-12 rounded-xl"
-                onClick={() => setShowConfirmModal(false)}
-              >
-                Cancel
+                Done Scanning
               </Button>
             </div>
           </div>
