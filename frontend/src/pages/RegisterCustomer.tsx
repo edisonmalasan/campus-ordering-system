@@ -32,10 +32,8 @@ export default function RegisterCustomer() {
     gender: "",
   });
 
-  // Clear any existing errors when component mounts
   useEffect(() => {
     clearError();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,9 +141,15 @@ export default function RegisterCustomer() {
                       </div>
                     )}
                   </div>
-                  <FieldDescription className={formData.password && formData.password.length < 8 ? "text-red-600" : ""}>
-                    {formData.password && formData.password.length < 8 
-                      ? `${formData.password.length}/8 characters` 
+                  <FieldDescription
+                    className={
+                      formData.password && formData.password.length < 8
+                        ? "text-red-600"
+                        : ""
+                    }
+                  >
+                    {formData.password && formData.password.length < 8
+                      ? `${formData.password.length}/8 characters`
                       : "Min 8 characters"}
                   </FieldDescription>
                 </Field>
@@ -179,8 +183,16 @@ export default function RegisterCustomer() {
                       </div>
                     )}
                   </div>
-                  <FieldDescription className={formData.confirmPassword && formData.password !== formData.confirmPassword ? "text-red-600" : ""}>
-                    {formData.confirmPassword && formData.password !== formData.confirmPassword
+                  <FieldDescription
+                    className={
+                      formData.confirmPassword &&
+                      formData.password !== formData.confirmPassword
+                        ? "text-red-600"
+                        : ""
+                    }
+                  >
+                    {formData.confirmPassword &&
+                    formData.password !== formData.confirmPassword
                       ? "Passwords do not match"
                       : "Re-enter your password"}
                   </FieldDescription>
